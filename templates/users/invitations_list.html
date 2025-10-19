@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">My Invitations</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        {% if pending_invitations %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Pending Team Invitations</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for invitation in pending_invitations %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h5 class="mb-1">{{ invitation.team.name }}</h5>
+                                <p class="mb-1">{{ invitation.team.description }}</p>
+                                <small class="text-muted">
+                                    Invited by: {{ invitation.invited_by.get_full_name|default:invitation.invited_by.username }}
+                                </small>
+                                <br>
+                                <small class="text-muted">
+                                    Role: <span class="badge bg-primary">{{ invitation.get_role_display }}</span>
+                                </small>
+                                <br>
+                                <small class="text-muted">
+                                    Expires: {{ invitation.expires_at|date:"M d, Y" }}
+                                </small>
+                            </div>
+                            <div class="ms-3">
+                                <div class="btn-group-vertical">
+                                    <a href="{% url 'users:invitation_respond' invitation.token 'accept' %}" 
+                                       class="btn btn-success btn-sm">
+                                        <i class="fas fa-check"></i> Accept
+                                    </a>
+                                    <a href="{% url 'users:invitation_respond' invitation.token 'decline' %}" 
+                                       class="btn btn-outline-danger btn-sm mt-1">
+                                        <i class="fas fa-times"></i> Decline
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-envelope-open-text fa-3x text-muted mb-3"></i>
+                <h4>No Pending Invitations</h4>
+                <p class="text-muted">You don't have any pending team invitations at the moment.</p>
+                <a href="{% url 'dashboard' %}" class="btn btn-primary">Go to Dashboard</a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">About Team Invitations</h5>
+            </div>
+            <div class="card-body">
+                <p>When you accept a team invitation:</p>
+                <ul class="small">
+                    <li>You'll be added to the team with the specified role</li>
+                    <li>You'll gain access to all team projects and tasks</li>
+                    <li>You can collaborate with other team members</li>
+                    <li>You'll receive notifications about team activity</li>
+                </ul>
+                
+                <div class="alert alert-info mt-3">
+                    <small>
+                        <strong>Tip:</strong> You can leave a team at any time from the team settings.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

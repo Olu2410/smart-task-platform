@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ task.title }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'tasks:update_task' task.pk %}" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-edit"></i> Edit
+        </a>
+        <a href="{% url 'tasks:task_board' %}" class="btn btn-sm btn-outline-primary ms-2">
+            <i class="fas fa-arrow-left"></i> Back to Board
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5>Task Details</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Description:</strong></p>
+                <p>{{ task.description|linebreaks }}</p>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Status:</strong> <span class="badge bg-secondary">{{ task.get_status_display }}</span></p>
+                        <p><strong>Priority:</strong> <span class="badge bg-{{ task.priority }}">{{ task.get_priority_display }}</span></p>
+                        <p><strong>Project:</strong> {{ task.project.name }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Assigned to:</strong> {{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</p>
+                        <p><strong>Due Date:</strong> {% if task.due_date %}{{ task.due_date|date:"M d, Y H:i" }}{% else %}No due date{% endif %}</p>
+                        <p><strong>Created by:</strong> {{ task.created_by.get_full_name|default:task.created_by.username }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'tasks:update_task' task.pk %}" class="btn btn-primary">Edit Task</a>
+                    <a href="{% url 'tasks:task_board' %}" class="btn btn-outline-secondary">Back to Board</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

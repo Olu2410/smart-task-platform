@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% load django_bootstrap5 %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Create New Team</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'users:team_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Teams
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Team Information</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    {% bootstrap_form form %}
+                    
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-users"></i> Create Team
+                        </button>
+                        <a href="{% url 'users:team_list' %}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">About Teams</h5>
+            </div>
+            <div class="card-body">
+                <h6>What are teams?</h6>
+                <p>Teams are groups of users who collaborate on projects and tasks together.</p>
+                
+                <h6>Team Settings:</h6>
+                <ul>
+                    <li><strong>Public Team:</strong> Anyone can see the team and its members</li>
+                    <li><strong>Allow Self-Join:</strong> Users can join without an invitation</li>
+                </ul>
+                
+                <h6>Team Roles:</h6>
+                <ul>
+                    <li><strong>Admin:</strong> Full control over the team</li>
+                    <li><strong>Manager:</strong> Can manage tasks and invite members</li>
+                    <li><strong>Member:</strong> Can work on tasks and view team content</li>
+                    <li><strong>Viewer:</strong> Read-only access to team content</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

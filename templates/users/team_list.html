@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Teams</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'users:team_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Create Team
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    {% for team in teams %}
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{{ team.name }}</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">{{ team.description }}</p>
+                <div class="mb-3">
+                    <span class="badge bg-primary">{{ team.member_count }} members</span>
+                    <span class="badge bg-secondary">{{ team.project_count }} projects</span>
+                    <span class="badge bg-info">{{ team.task_count }} tasks</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        Created by: {{ team.created_by.get_full_name|default:team.created_by.username }}
+                    </small>
+                    <a href="{% url 'users:team_detail' team.id %}" class="btn btn-sm btn-outline-primary">View Team</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h5>No teams yet!</h5>
+            <p>Create your first team to start collaborating with others.</p>
+            <a href="{% url 'users:team_create' %}" class="btn btn-primary">Create Team</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Public Teams Section -->
+{% if public_teams %}
+<div class="row mt-5">
+    <div class="col-12">
+        <h3>Public Teams You Can Join</h3>
+        <div class="row">
+            {% for team in public_teams %}
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">{{ team.name }}</h5>
+                        <span class="badge bg-success">Public</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">{{ team.description }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                {{ team.members.count }} members
+                            </small>
+                            {% if team.allow_self_join %}
+                            <a href="#" class="btn btn-sm btn-success">Join Team</a>
+                            {% else %}
+                            <small class="text-muted">Request to join</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

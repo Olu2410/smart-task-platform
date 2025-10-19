@@ -1,0 +1,22 @@
+Team Invitation - Smart Task Platform
+
+You've been invited to join {{ team.name }}
+
+Hello!
+
+You have been invited by {{ invited_by.get_full_name|default:invited_by.username }} to join the team "{{ team.name }}" on Smart Task Platform.
+
+Team Description:
+{{ team.description }}
+
+Your Role: {{ role|title }}
+
+Accept your invitation here:
+{{ accept_url }}
+
+This invitation will expire on {{ expires_at|date:"F d, Y" }}.
+
+If you believe you received this invitation by mistake, please ignore this email.
+
+--
+Smart Task Platform - Better team collaboration

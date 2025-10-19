@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% load django_bootstrap5 %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Create New Task</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'tasks:task_board' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Board
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Task Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            {% bootstrap_field form.title %}
+                        </div>
+                        <div class="col-md-6">
+                            {% bootstrap_field form.project %}
+                        </div>
+                    </div>
+                    
+                    {% bootstrap_field form.description %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            {% bootstrap_field form.assigned_to %}
+                        </div>
+                        <div class="col-md-6">
+                            {% bootstrap_field form.due_date %}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            {% bootstrap_field form.priority %}
+                        </div>
+                        <div class="col-md-4">
+                            {% bootstrap_field form.status %}
+                        </div>
+                        <div class="col-md-4">
+                            {% bootstrap_field form.estimated_hours %}
+                        </div>
+                    </div>
+                    
+                    {% bootstrap_field form.tags %}
+                    
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Create Task</button>
+                        <a href="{% url 'tasks:task_board' %}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Quick Tips</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <strong>Title:</strong> Be specific and clear about the task
+                    </li>
+                    <li class="mb-2">
+                        <strong>Description:</strong> Include all necessary details and requirements
+                    </li>
+                    <li class="mb-2">
+                        <strong>Due Date:</strong> Set realistic deadlines
+                    </li>
+                    <li class="mb-2">
+                        <strong>Priority:</strong> Helps team members understand urgency
+                    </li>
+                    <li>
+                        <strong>Tags:</strong> Use commas to separate multiple tags
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Update assignable users when project changes
+    const projectSelect = document.getElementById('id_project');
+    const assignedToSelect = document.getElementById('id_assigned_to');
+    
+    if (projectSelect && assignedToSelect) {
+        projectSelect.addEventListener('change', function() {
+            const projectId = this.value;
+            if (projectId) {
+                // In a real implementation, you'd fetch users via AJAX
+                // For now, we'll just enable the field
+                assignedToSelect.disabled = false;
+            } else {
+                assignedToSelect.disabled = true;
+            }
+        });
+    }
+    
+    // Initialize datetime picker for due date
+    const dueDateField = document.getElementById('id_due_date');
+    if (dueDateField) {
+        dueDateField.type = 'datetime-local';
+    }
+});
+</script>
+{% endblock %}

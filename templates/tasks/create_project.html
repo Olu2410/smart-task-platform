@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% load django_bootstrap5 %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">Create New Project</h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {% if form %}
+                        {% bootstrap_form form %}
+                    {% else %}
+                        <div class="alert alert-danger">Form not found. Please check your view.</div>
+                    {% endif %}
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Create Project</button>
+                        <a href="{% url 'tasks:project_list' %}" class="btn btn-secondary">Cancel</a>
+                        <!-- <a href="{% url 'tasks:task_board' %}" class="btn btn-secondary">Cancel</a> -->
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function updateAssignableUsers(projectId) {
+    // This will be implemented with JavaScript to dynamically update assignable users
+    console.log('Project changed to:', projectId);
+}
+</script>
+{% endblock %}
