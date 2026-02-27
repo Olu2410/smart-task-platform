@@ -1,0 +1,257 @@
+{% extends 'base.html' %}
+{% load django_bootstrap5 %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-cog text-primary"></i> Calendar Settings
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'calendar:calendar_view' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Calendar
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- Working Hours Settings -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Working Hours</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <p class="text-muted mb-4">
+                        Set your standard working hours. This helps with automatic scheduling and prevents meetings outside your available times.
+                    </p>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Day</th>
+                                    <th>Working Day</th>
+                                    <th>Start Time</th>
+                                    <th>End Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for hours in working_hours %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ hours.get_day_of_week_display }}</strong>
+                                    </td>
+                                    <td>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   name="is_working_{{ hours.day_of_week }}" 
+                                                   id="is_working_{{ hours.day_of_week }}"
+                                                   {% if hours.is_working_day %}checked{% endif %}>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <input type="time" name="start_time_{{ hours.day_of_week }}" 
+                                               class="form-control form-control-sm" 
+                                               value="{{ hours.start_time|time:'H:i' }}">
+                                    </td>
+                                    <td>
+                                        <input type="time" name="end_time_{{ hours.day_of_week }}" 
+                                               class="form-control form-control-sm" 
+                                               value="{{ hours.end_time|time:'H:i' }}">
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Working Hours
+                        </button>
+                        <a href="{% url 'calendar:calendar_view' %}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Calendar Integrations -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Calendar Integrations</h5>
+            </div>
+            <div class="card-body">
+                <!-- Google Calendar -->
+                <div class="d-flex justify-content-between align-items-center p-3 border rounded mb-3">
+                    <div class="d-flex align-items-center">
+                        <i class="fab fa-google fa-2x text-danger me-3"></i>
+                        <div>
+                            <h6 class="mb-0">Google Calendar</h6>
+                            <p class="text-muted mb-0">Sync events with your Google Calendar</p>
+                        </div>
+                    </div>
+                    <div>
+                        {% if calendar_syncs %}
+                            {% for sync in calendar_syncs %}
+                                {% if sync.provider == 'google' and sync.is_active %}
+                                <span class="badge bg-success me-2">Connected</span>
+                                <form method="post" action="{% url 'calendar:google_calendar_sync' %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="disconnect">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                            onclick="return confirm('Disconnect Google Calendar?')">
+                                        Disconnect
+                                    </button>
+                                </form>
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                        <form method="post" action="{% url 'calendar:google_calendar_sync' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="connect">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fab fa-google"></i> Connect
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Outlook Calendar (Placeholder) -->
+                <div class="d-flex justify-content-between align-items-center p-3 border rounded mb-3 opacity-50">
+                    <div class="d-flex align-items-center">
+                        <i class="fab fa-microsoft fa-2x text-primary me-3"></i>
+                        <div>
+                            <h6 class="mb-0">Microsoft Outlook</h6>
+                            <p class="text-muted mb-0">Sync events with your Outlook Calendar</p>
+                        </div>
+                    </div>
+                    <div>
+                        <button class="btn btn-outline-secondary" disabled>
+                            Coming Soon
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Apple Calendar (Placeholder) -->
+                <div class="d-flex justify-content-between align-items-center p-3 border rounded opacity-50">
+                    <div class="d-flex align-items-center">
+                        <i class="fab fa-apple fa-2x text-dark me-3"></i>
+                        <div>
+                            <h6 class="mb-0">Apple Calendar</h6>
+                            <p class="text-muted mb-0">Sync events with your Apple Calendar</p>
+                        </div>
+                    </div>
+                    <div>
+                        <button class="btn btn-outline-secondary" disabled>
+                            Coming Soon
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Sync Settings -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Sync Preferences</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Sync Future Days</label>
+                    <select class="form-select">
+                        <option value="7">1 Week</option>
+                        <option value="14" selected>2 Weeks</option>
+                        <option value="30">1 Month</option>
+                        <option value="60">2 Months</option>
+                    </select>
+                    <small class="text-muted">How many days ahead to sync events</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Sync Past Days</label>
+                    <select class="form-select">
+                        <option value="0">None</option>
+                        <option value="7" selected>1 Week</option>
+                        <option value="14">2 Weeks</option>
+                        <option value="30">1 Month</option>
+                    </select>
+                    <small class="text-muted">How many days back to sync events</small>
+                </div>
+                
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="auto_sync" checked>
+                    <label class="form-check-label" for="auto_sync">
+                        Auto-sync every 15 minutes
+                    </label>
+                </div>
+                
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="sync_tasks" checked>
+                    <label class="form-check-label" for="sync_tasks">
+                        Sync tasks as calendar events
+                    </label>
+                </div>
+                
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="sync_meetings" checked>
+                    <label class="form-check-label" for="sync_meetings">
+                        Sync meetings with external calendars
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'calendar:create_calendar_event' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-plus"></i> Create New Event
+                    </a>
+                    <a href="{% url 'calendar:create_time_block' %}" class="btn btn-outline-success">
+                        <i class="fas fa-clock"></i> Create Time Block
+                    </a>
+                    <a href="{% url 'tasks:task_board' %}" class="btn btn-outline-info">
+                        <i class="fas fa-tasks"></i> View Tasks
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help & Tips -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Calendar Tips</h5>
+            </div>
+            <div class="card-body">
+                <ul class="small">
+                    <li class="mb-2">
+                        <strong>Time blocking</strong> helps with focused work sessions
+                    </li>
+                    <li class="mb-2">
+                        Set accurate <strong>working hours</strong> to prevent scheduling conflicts
+                    </li>
+                    <li class="mb-2">
+                        Use <strong>color coding</strong> to quickly identify event types
+                    </li>
+                    <li class="mb-2">
+                        <strong>Sync regularly</strong> to keep all calendars up to date
+                    </li>
+                    <li>
+                        Schedule <strong>buffer time</strong> between meetings
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

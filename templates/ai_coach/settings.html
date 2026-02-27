@@ -1,0 +1,351 @@
+{% extends 'base.html' %}
+{% load django_bootstrap5 %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-cog text-primary"></i> AI Coach Settings
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'ai_coach:ai_suggestions' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to AI Coach
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">AI Preferences</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <!-- AI Feature Toggles -->
+                    <div class="mb-4">
+                        <h6>AI Features</h6>
+                        <p class="text-muted">Control which AI features are active for your account.</p>
+                        
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" name="ai_task_suggestions" 
+                                   id="ai_task_suggestions" {% if user.ai_task_suggestions %}checked{% endif %}>
+                            <label class="form-check-label" for="ai_task_suggestions">
+                                <strong>Task Priority Suggestions</strong>
+                                <small class="d-block text-muted">
+                                    Get AI recommendations for task priorities based on due dates, importance, and context.
+                                </small>
+                            </label>
+                        </div>
+                        
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" name="ai_time_optimization" 
+                                   id="ai_time_optimization" {% if user.ai_time_optimization %}checked{% endif %}>
+                            <label class="form-check-label" for="ai_time_optimization">
+                                <strong>Time Optimization</strong>
+                                <small class="d-block text-muted">
+                                    Receive AI suggestions for optimal task timing and scheduling based on your availability.
+                                </small>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <!-- Notification Preferences -->
+                    <div class="mb-4">
+                        <h6>AI Notifications</h6>
+                        <p class="text-muted">Choose how you want to receive AI suggestions.</p>
+                        
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="ai_email_notifications" 
+                                   id="ai_email_notifications" checked>
+                            <label class="form-check-label" for="ai_email_notifications">
+                                Email notifications for important AI suggestions
+                            </label>
+                        </div>
+                        
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="ai_desktop_notifications" 
+                                   id="ai_desktop_notifications" checked>
+                            <label class="form-check-label" for="ai_desktop_notifications">
+                                Desktop notifications for real-time suggestions
+                            </label>
+                        </div>
+                        
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="ai_daily_summary" 
+                                   id="ai_daily_summary">
+                            <label class="form-check-label" for="ai_daily_summary">
+                                Daily AI summary email
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <!-- Suggestion Frequency -->
+                    <div class="mb-4">
+                        <h6>Suggestion Frequency</h6>
+                        <p class="text-muted">How often should the AI analyze your tasks?</p>
+                        
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="suggestion_frequency" 
+                                   id="freq_realtime" value="realtime" checked>
+                            <label class="form-check-label" for="freq_realtime">
+                                Real-time (Analyze when tasks change)
+                            </label>
+                        </div>
+                        
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="suggestion_frequency" 
+                                   id="freq_daily" value="daily">
+                            <label class="form-check-label" for="freq_daily">
+                                Daily (Once per day)
+                            </label>
+                        </div>
+                        
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="suggestion_frequency" 
+                                   id="freq_manual" value="manual">
+                            <label class="form-check-label" for="freq_manual">
+                                Manual (Only when I request analysis)
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <!-- Data Privacy -->
+                    <div class="mb-4">
+                        <h6>Data Privacy</h6>
+                        <p class="text-muted">Control how your data is used for AI analysis.</p>
+                        
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" name="allow_task_analysis" 
+                                   id="allow_task_analysis" checked>
+                            <label class="form-check-label" for="allow_task_analysis">
+                                Allow AI to analyze task content and descriptions
+                                <small class="d-block text-muted">
+                                    Task titles and descriptions help the AI provide better suggestions.
+                                </small>
+                            </label>
+                        </div>
+                        
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" name="allow_schedule_analysis" 
+                                   id="allow_schedule_analysis" checked>
+                            <label class="form-check-label" for="allow_schedule_analysis">
+                                Allow AI to analyze my schedule and availability
+                                <small class="d-block text-muted">
+                                    Your work hours and availability help with timing suggestions.
+                                </small>
+                            </label>
+                        </div>
+                        
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="allow_team_analysis" 
+                                   id="allow_team_analysis" checked>
+                            <label class="form-check-label" for="allow_team_analysis">
+                                Allow AI to analyze team workload patterns
+                                <small class="d-block text-muted">
+                                    Team data helps with workload balancing suggestions (anonymous and aggregated).
+                                </small>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Settings
+                        </button>
+                        <a href="{% url 'ai_coach:ai_suggestions' %}" class="btn btn-secondary">Cancel</a>
+                        
+                        <button type="button" class="btn btn-outline-danger float-end" data-bs-toggle="modal" data-bs-target="#resetModal">
+                            <i class="fas fa-trash"></i> Reset All AI Data
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- AI Status Card -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">AI Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="me-3">
+                        <i class="fas fa-robot fa-2x text-{% if openai_configured %}success{% else %}warning{% endif %}"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0">OpenAI Integration</h6>
+                        <small class="text-{% if openai_configured %}success{% else %}warning{% endif %}">
+                            {% if openai_configured %}
+                            <i class="fas fa-check-circle"></i> Connected and Active
+                            {% else %}
+                            <i class="fas fa-exclamation-triangle"></i> API Key Not Configured
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+                
+                <div class="d-flex align-items-center mb-3">
+                    <div class="me-3">
+                        <i class="fas fa-brain fa-2x text-primary"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0">AI Model</h6>
+                        <small class="text-muted">GPT-3.5 Turbo</small>
+                    </div>
+                </div>
+                
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <i class="fas fa-shield-alt fa-2x text-info"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0">Data Privacy</h6>
+                        <small class="text-muted">Encrypted & Secure</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Usage Statistics -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Your AI Usage</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <small class="text-muted">Suggestions Generated</small>
+                    <h4>{{ ai_suggestions_count|default:"0" }}</h4>
+                </div>
+                
+                <div class="mb-3">
+                    <small class="text-muted">Suggestions Applied</small>
+                    <h4>{{ applied_suggestions_count|default:"0" }}</h4>
+                </div>
+                
+                <div class="mb-3">
+                    <small class="text-muted">Tasks Analyzed</small>
+                    <h4>{{ analyzed_tasks_count|default:"0" }}</h4>
+                </div>
+                
+                <div class="progress mb-2" style="height: 8px;">
+                    <div class="progress-bar bg-success" style="width: {{ acceptance_rate|default:"0" }}%"></div>
+                </div>
+                <small class="text-muted">Suggestion Acceptance Rate: {{ acceptance_rate|default:"0" }}%</small>
+            </div>
+        </div>
+
+        <!-- AI Tips -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Getting the Most from AI</h5>
+            </div>
+            <div class="card-body">
+                <ul class="small">
+                    <li class="mb-2">
+                        <strong>Be specific</strong> in task descriptions for better AI analysis
+                    </li>
+                    <li class="mb-2">
+                        <strong>Set accurate due dates</strong> to improve timing suggestions
+                    </li>
+                    <li class="mb-2">
+                        <strong>Keep your availability updated</strong> for optimal scheduling
+                    </li>
+                    <li class="mb-2">
+                        <strong>Review suggestions regularly</strong> and provide feedback
+                    </li>
+                    <li>
+                        <strong>Use the weekly plan</strong> for overall productivity insights
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reset Confirmation Modal -->
+<div class="modal fade" id="resetModal" tabindex="-1" aria-labelledby="resetModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="resetModalLabel">Reset AI Data</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Warning:</strong> This action cannot be undone.
+                </div>
+                <p>This will permanently delete all your AI suggestions, analysis history, and personalization data. The AI will start fresh with your future tasks.</p>
+                <p>Are you sure you want to proceed?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{% url 'ai_coach:reset_ai_data' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Yes, Reset All AI Data</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add confirmation for the reset button
+    const resetButtons = document.querySelectorAll('[data-bs-target="#resetModal"]');
+    resetButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // The modal will handle the confirmation
+        });
+    });
+    
+    // Show/hide settings based on master toggle
+    const masterToggle = document.getElementById('ai_features_enabled');
+    const featureToggles = document.querySelectorAll('.feature-toggle');
+    
+    function updateFeatureToggles() {
+        const isEnabled = masterToggle.checked;
+        featureToggles.forEach(toggle => {
+            toggle.disabled = !isEnabled;
+            if (!isEnabled) {
+                toggle.checked = false;
+            }
+        });
+    }
+    
+    if (masterToggle) {
+        masterToggle.addEventListener('change', updateFeatureToggles);
+        updateFeatureToggles(); // Initial state
+    }
+});
+</script>
+
+<style>
+.form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+</style>
+{% endblock %}

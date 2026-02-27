@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Notifications</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        {% if unread_count > 0 %}
+        <form method="post" action="{% url 'notifications:mark_all_read' %}" class="me-2">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success btn-sm">
+                <i class="fas fa-check-double"></i> Mark All as Read
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                {% if notifications %}
+                <div class="list-group">
+                    {% for notification in notifications %}
+                    <div class="list-group-item {% if not notification.is_read %}bg-light{% endif %}">
+                        <div class="d-flex w-100 justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ notification.title }}</h6>
+                                <p class="mb-1">{{ notification.message }}</p>
+                                <small class="text-muted">
+                                    <i class="fas fa-clock"></i> {{ notification.created_at|timesince }} ago
+                                    • {{ notification.get_notification_type_display }}
+                                </small>
+                            </div>
+                            <div class="ms-3">
+                                {% if not notification.is_read %}
+                                <form method="post" action="{% url 'notifications:mark_notification_read' notification.id %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success btn-sm" title="Mark as read">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                                {% if notification.get_absolute_url != '#' %}
+                                <a href="{{ notification.get_absolute_url }}" class="btn btn-primary btn-sm" title="View related item">
+                                    <i class="fas fa-external-link-alt"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No notifications yet</h5>
+                    <p class="text-muted">You're all caught up! New notifications will appear here.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const list = document.getElementById("notificationList");
+    if (!list) return;
+
+    const wsScheme = location.protocol === "https:" ? "wss" : "ws";
+    const userId = "{{ request.user.id }}";
+
+    const socket = new WebSocket(
+        `${wsScheme}://${location.host}/ws/notifications/${userId}/`
+    );
+
+    socket.onmessage = function (event) {
+        const data = JSON.parse(event.data);
+
+        if (data.type === "new_notification") {
+            prependNotification(data.notification);
+        }
+    };
+
+    socket.onclose = function () {
+        console.warn("Notification WebSocket closed");
+    };
+
+    // ----------------------------
+    // UI INSERTION
+    // ----------------------------
+
+    function prependNotification(n) {
+        const div = document.createElement("div");
+        div.className = "list-group-item bg-light";
+
+        div.innerHTML = `
+            <div class="d-flex w-100 justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <h6 class="mb-1">${n.title}</h6>
+                    <p class="mb-1">${n.message}</p>
+                    <small class="text-muted">
+                        <i class="fas fa-clock"></i> just now
+                        • ${n.notification_type.replace('_', ' ')}
+                    </small>
+                </div>
+                <div class="ms-3">
+                    <button class="btn btn-success btn-sm mark-read-btn" data-id="${n.id}">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    ${n.url !== "#" ? `
+                        <a href="${n.url}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    ` : ""}
+                </div>
+            </div>
+        `;
+
+        list.prepend(div);
+
+        div.querySelector(".mark-read-btn")
+           .addEventListener("click", () => markAsRead(n.id, div));
+    }
+
+    // ----------------------------
+    // MARK AS READ (AJAX)
+    // ----------------------------
+
+    function markAsRead(id, element) {
+        fetch(`/notifications/${id}/mark-read/`, {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": getCSRFToken(),
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        }).then(() => {
+            element.classList.remove("bg-light");
+        });
+    }
+
+    function getCSRFToken() {
+        return document.querySelector('meta[name="csrf-token"]').content;
+    }
+})();
+</script>
+{% endblock %}

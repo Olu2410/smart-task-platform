@@ -10,4 +10,7 @@ urlpatterns = [
     path('analyze-task/<int:task_id>/', views.analyze_task, name='analyze_task'),
     path('weekly-plan/', views.generate_weekly_plan, name='generate_weekly_plan'),
     path('workload-analysis/', views.workload_analysis, name='workload_analysis'),
+    path('analyze-all-tasks/', views.analyze_all_tasks, name='analyze_all_tasks'),
+    path('ai-settings/', views.ai_settings, name='ai_settings'),
+    path('settings/reset/', views.reset_ai_data, name='reset_ai_data'),
 ]

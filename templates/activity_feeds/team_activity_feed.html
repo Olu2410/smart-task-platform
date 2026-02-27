@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ team.name }} - Activity Feed</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'team_chat:channel_list' team_id=team.id %}" class="btn btn-outline-primary me-2">
+            <i class="fas fa-comments"></i> Team Chat
+        </a>
+        <a href="{% url 'users:team_detail' team_id=team.id %}" class="btn btn-outline-secondary">
+            <i class="fas fa-users"></i> Team Details
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-rss"></i> Recent Team Activity
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if activities %}
+                <div class="activity-timeline">
+                    {% for activity in activities %}
+                    <div class="activity-item position-relative mb-4 pb-4">
+                        <div class="activity-timeline-line"></div>
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                    <i class="fas fa-{{ activity.activity_type|slice:':3' }}"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <h6 class="mb-1">{{ activity.user.get_full_name }}</h6>
+                                        <p class="text-muted mb-1">{{ activity.description }}</p>
+                                    </div>
+                                    <small class="text-muted">{{ activity.created_at|timesince }} ago</small>
+                                </div>
+                                <div class="activity-meta">
+                                    <span class="badge bg-light text-dark me-2">
+                                        <i class="fas fa-tag me-1"></i>{{ activity.get_activity_type_display }}
+                                    </span>
+                                    {% if activity.metadata %}
+                                        {% for key, value in activity.metadata.items %}
+                                        <span class="badge bg-light text-dark me-2">
+                                            {{ key }}: {{ value|truncatewords:3 }}
+                                        </span>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No team activity yet</h5>
+                    <p class="text-muted">Start collaborating to see activities here</p>
+                    <div class="d-flex justify-content-center gap-2">
+                        <a href="{% url 'tasks:create_task' %}" class="btn btn-primary">Create Task</a>
+                        <a href="{% url 'team_chat:channel_list' team_id=team.id %}" class="btn btn-outline-primary">Start Chat</a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .activity-timeline {
+        position: relative;
+    }
+    
+    .activity-timeline-line {
+        position: absolute;
+        left: 25px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background-color: #e9ecef;
+        z-index: 1;
+    }
+    
+    .activity-item:last-child .activity-timeline-line {
+        display: none;
+    }
+    
+    .avatar-sm {
+        width: 40px;
+        height: 40px;
+        z-index: 2;
+        position: relative;
+    }
+    
+    .activity-meta {
+        margin-top: 8px;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-refresh activity feed every 30 seconds
+        setInterval(() => {
+            fetch(`/activity/api/activities/team/{{ team.id }}/`)
+                .then(response => response.json())
+                .then(data => {
+                    // Update activity feed with new data
+                    console.log('Activity feed updated', data);
+                });
+        }, 30000);
+    });
+</script>
+{% endblock %}

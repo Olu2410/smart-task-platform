@@ -18,14 +18,14 @@
                 <h5 class="mb-0">Send Invitations</h5>
             </div>
             <div class="card-body">
-                <form method="post">
+                <form method="post" action="{% url 'users:team_invite' team.id %}">
                     {% csrf_token %}
                     
                     <div class="mb-3">
                         {% bootstrap_field form.emails %}
-                        <small class="form-text text-muted">
-                            <!-- Enter multiple email addresses separated by commas -->
-                        </small>
+                        <!-- <small class="form-text text-muted">
+                            Enter multiple email addresses separated by commas
+                        </small> -->
                     </div>
                     
                     <div class="mb-3">
@@ -61,6 +61,7 @@
                                 <th>Invited By</th>
                                 <th>Expires</th>
                                 <th>Status</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -76,6 +77,16 @@
                                 <td>{{ invitation.expires_at|date:"M d, Y" }}</td>
                                 <td>
                                     <span class="badge bg-warning">{{ invitation.get_status_display }}</span>
+                                </td>
+                                <td>
+                                    <!-- Cancel button (only for pending) -->
+                                    {% if invitation.status == "pending" %}
+                                    <a href="{% url 'users:invitation_cancel' invitation.id %}"
+                                    class="badge bg-danger text-decoration-none"
+                                    onclick="return confirm('Cancel this invitation?');">
+                                        Cancel
+                                    </a>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}

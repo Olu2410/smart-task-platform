@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-calendar-week text-primary"></i> AI Weekly Plan
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'ai_coach:ai_suggestions' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Suggestions
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        {% if weekly_plan.success %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Your AI-Generated Weekly Plan</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-bullseye"></i> Weekly Focus</h6>
+                    <p class="mb-0">{{ weekly_plan.weekly_focus }}</p>
+                </div>
+
+                <h6 class="mt-4">Key Priorities</h6>
+                <ul class="list-group mb-4">
+                    {% for priority in weekly_plan.key_priorities %}
+                    <li class="list-group-item">
+                        <i class="fas fa-flag text-primary me-2"></i>{{ priority }}
+                    </li>
+                    {% endfor %}
+                </ul>
+
+                {% if weekly_plan.risk_warnings %}
+                <h6>Risk Warnings</h6>
+                <div class="alert alert-warning">
+                    <ul class="mb-0">
+                        {% for warning in weekly_plan.risk_warnings %}
+                        <li>{{ warning }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                {% if weekly_plan.daily_plans %}
+                <h6 class="mt-4">Daily Breakdown</h6>
+                <div class="accordion" id="dailyPlansAccordion">
+                    {% for day, plan in weekly_plan.daily_plans.items %}
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="heading{{ day|title }}">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#collapse{{ day|title }}" aria-expanded="true">
+                                <strong>{{ day|title }}</strong>: {{ plan.focus }}
+                            </button>
+                        </h2>
+                        <div id="collapse{{ day|title }}" class="accordion-collapse collapse show" 
+                            aria-labelledby="heading{{ day|title }}">
+                            <div class="accordion-body">
+                                <h6>Tasks:</h6>
+                                <ul>
+                                    {% for task in plan.tasks %}
+                                    <li>{{ task }}</li>
+                                    {% endfor %}
+                                </ul>
+                                
+                                {% if plan.time_blocks %}
+                                <h6>Recommended Time Blocks:</h6>
+                                <div class="list-group">
+                                    {% for block in plan.time_blocks %}
+                                    <div class="list-group-item">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <strong>{{ block.time }}</strong>
+                                            <span class="badge bg-{{ block.priority }}">{{ block.priority|title }}</span>
+                                        </div>
+                                        <p class="mb-1">{{ block.activity }}</p>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                <h4>Weekly Plan Unavailable</h4>
+                <p class="text-muted">Unable to generate weekly plan at this time.</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Upcoming Tasks -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Upcoming Tasks</h5>
+            </div>
+            <div class="card-body">
+                {% if upcoming_tasks %}
+                <div class="list-group list-group-flush">
+                    {% for task in upcoming_tasks|slice:":8" %}
+                    <div class="list-group-item px-0">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ task.title }}</h6>
+                            <span class="badge bg-{{ task.priority }}">{{ task.get_priority_display }}</span>
+                        </div>
+                        <p class="mb-1 small text-muted">{{ task.description|truncatewords:10 }}</p>
+                        <small class="text-muted">
+                            Due: {{ task.due_date|date:"M d" }} • {{ task.project.name }}
+                        </small>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">No upcoming tasks found.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Planning Tips -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">AI Planning Tips</h5>
+            </div>
+            <div class="card-body">
+                <ul class="small">
+                    <li class="mb-2">Focus on high-priority tasks first thing in the morning</li>
+                    <li class="mb-2">Schedule similar tasks together to reduce context switching</li>
+                    <li class="mb-2">Leave buffer time for unexpected tasks and breaks</li>
+                    <li class="mb-2">Review and adjust your plan each morning</li>
+                    <li>Use time blocking for focused work sessions</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

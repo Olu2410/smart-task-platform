@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Weekly Plan</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'ai_coach:ai_suggestions' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Suggestions
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Your Week at a Glance</h5>
+            </div>
+            <div class="card-body">
+                <h6>Upcoming Tasks</h6>
+                {% if weekly_plan.tasks %}
+                <div class="list-group">
+                    {% for task in weekly_plan.tasks %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ task.title }}</h6>
+                            <small class="text-muted">{{ task.due_date|date:"M d" }}</small>
+                        </div>
+                        <p class="mb-1">{{ task.description|truncatewords:20 }}</p>
+                        <small class="text-muted">Project: {{ task.project.name }}</small>
+                        <span class="badge bg-{{ task.priority }} float-end">{{ task.get_priority_display }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">No upcoming tasks for this week.</p>
+                {% endif %}
+                
+                <h6 class="mt-4">AI Suggestions</h6>
+                <ul>
+                    {% for suggestion in weekly_plan.suggestions %}
+                    <li>{{ suggestion }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Planning Tips</h5>
+            </div>
+            <div class="card-body">
+                <ul class="small">
+                    <li>Focus on high-priority tasks first</li>
+                    <li>Break large tasks into smaller steps</li>
+                    <li>Schedule time for deep work</li>
+                    <li>Leave buffer time for unexpected tasks</li>
+                    <li>Review your plan each morning</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

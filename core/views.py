@@ -39,10 +39,20 @@ def dashboard(request):
         status__in=['todo', 'in_progress', 'review']
     ).count()
     
+    # Get recent activities from activity feeds
+    recent_activities = []
+    try:
+        from activity_feeds.services import ActivityQueryService
+        recent_activities = ActivityQueryService.get_user_activities(request.user, limit=5)
+    except ImportError:
+        # Activity feeds app not available yet, use empty list
+        pass
+    
     return render(request, 'dashboard.html', {
         'tasks_by_status': tasks_by_status,
         'total_tasks': total_tasks,
         'pending_tasks': pending_tasks,
         'completed_tasks': completed_tasks,
         'overdue_tasks': overdue_tasks,
+        'recent_activities': recent_activities,
     })

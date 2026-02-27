@@ -1,15 +1,17 @@
 # Create your views here.
+import os
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
+# from django.http import JsonResponse
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
 import uuid
 
+from tasks.models import Project
 from .models import CustomUser, Team, TeamMembership, Invitation, UserAvailability
 from .forms import (CustomUserCreationForm, LoginForm, ProfileUpdateForm,
                    TeamCreationForm, TeamUpdateForm, InvitationForm, AvailabilityForm)
@@ -71,12 +73,20 @@ def logout_view(request):
     messages.info(request, 'You have been logged out successfully.')
     return redirect('users:login')
 
+
 @login_required
 def profile_view(request):
     if request.method == 'POST':
         form = ProfileUpdateForm(request.POST, request.FILES, instance=request.user)
         if form.is_valid():
-            form.save()
+            # Handle avatar deletion
+            if 'avatar-clear' in request.POST and request.user.avatar:
+                # Delete the old avatar file
+                if os.path.isfile(request.user.avatar.path):
+                    os.remove(request.user.avatar.path)
+                request.user.avatar = None
+            
+            user = form.save()
             messages.success(request, 'Profile updated successfully!')
             return redirect('users:profile')
     else:
@@ -86,57 +96,206 @@ def profile_view(request):
     user_teams = Team.objects.filter(members=request.user)
     user_memberships = TeamMembership.objects.filter(user=request.user).select_related('team')
     
+    # Get user availability
+    availability_schedule = UserAvailability.objects.filter(user=request.user)
+    
     return render(request, 'users/profile.html', {
         'form': form,
         'user_teams': user_teams,
         'user_memberships': user_memberships,
+        'availability_schedule': availability_schedule,
     })
+
+# @login_required
+# def profile_view(request):
+#     if request.method == 'POST':
+#         form = ProfileUpdateForm(request.POST, request.FILES, instance=request.user)
+#         if form.is_valid():
+#             form.save()
+#             messages.success(request, 'Profile updated successfully!')
+#             return redirect('users:profile')
+#     else:
+#         form = ProfileUpdateForm(instance=request.user)
+    
+#     # Get user's teams
+#     user_teams = Team.objects.filter(members=request.user)
+#     user_memberships = TeamMembership.objects.filter(user=request.user).select_related('team')
+    
+#     return render(request, 'users/profile.html', {
+#         'form': form,
+#         'user_teams': user_teams,
+#         'user_memberships': user_memberships,
+#     })
+
+
 
 @login_required
 def profile_availability(request):
+    """Manage user availability schedule"""
     availabilities = UserAvailability.objects.filter(user=request.user)
     
     if request.method == 'POST':
-        form = AvailabilityForm(request.POST)
-        if form.is_valid():
-            availability = form.save(commit=False)
-            availability.user = request.user
+        # Handle bulk availability updates
+        if 'bulk_update' in request.POST:
+            days_data = request.POST.get('days', '').split(',')
+            start_time = request.POST.get('start_time')
+            end_time = request.POST.get('end_time')
             
-            # Check for existing availability for this day
-            existing = UserAvailability.objects.filter(
-                user=request.user,
-                day_of_week=availability.day_of_week
-            ).first()
+            for day_str in days_data:
+                if day_str.strip():
+                    day = int(day_str)
+                    availability, created = UserAvailability.objects.get_or_create(
+                        user=request.user,
+                        day_of_week=day,
+                        defaults={
+                            'start_time': start_time,
+                            'end_time': end_time,
+                            'is_working_day': True
+                        }
+                    )
+                    if not created:
+                        availability.start_time = start_time
+                        availability.end_time = end_time
+                        availability.is_working_day = True
+                        availability.save()
             
-            if existing:
-                existing.start_time = availability.start_time
-                existing.end_time = availability.end_time
-                existing.is_working_day = availability.is_working_day
-                existing.save()
-                messages.success(request, f'Availability for {existing.get_day_of_week_display()} updated!')
-            else:
-                availability.save()
-                messages.success(request, f'Availability for {availability.get_day_of_week_display()} added!')
-            
-            return redirect('profile_availability')
+            messages.success(request, 'Availability schedule updated!')
+            return redirect('users:profile_availability')
+        
+        # Handle single day update
+        else:
+            form = AvailabilityForm(request.POST)
+            if form.is_valid():
+                availability = form.save(commit=False)
+                availability.user = request.user
+                
+                # Check for existing availability for this day
+                existing = UserAvailability.objects.filter(
+                    user=request.user,
+                    day_of_week=availability.day_of_week
+                ).first()
+                
+                if existing:
+                    existing.start_time = availability.start_time
+                    existing.end_time = availability.end_time
+                    existing.is_working_day = availability.is_working_day
+                    existing.save()
+                    messages.success(request, f'Availability for {existing.get_day_of_week_display()} updated!')
+                else:
+                    availability.save()
+                    messages.success(request, f'Availability for {availability.get_day_of_week_display()} added!')
+                
+                return redirect('users:profile_availability')
     else:
         form = AvailabilityForm()
     
     days_of_week = dict(UserAvailability._meta.get_field('day_of_week').choices)
     
+    # Get default work hours from user profile
+    default_start = request.user.workday_start.strftime('%H:%M') if request.user.workday_start else '09:00'
+    default_end = request.user.workday_end.strftime('%H:%M') if request.user.workday_end else '17:00'
+    
     return render(request, 'users/availability.html', {
         'availabilities': availabilities,
         'form': form,
         'days_of_week': days_of_week,
+        'default_start': default_start,
+        'default_end': default_end,
     })
+
+# @login_required
+# def profile_availability(request):
+#     availabilities = UserAvailability.objects.filter(user=request.user)
+    
+#     if request.method == 'POST':
+#         form = AvailabilityForm(request.POST)
+#         if form.is_valid():
+#             availability = form.save(commit=False)
+#             availability.user = request.user
+            
+#             # Check for existing availability for this day
+#             existing = UserAvailability.objects.filter(
+#                 user=request.user,
+#                 day_of_week=availability.day_of_week
+#             ).first()
+            
+#             if existing:
+#                 existing.start_time = availability.start_time
+#                 existing.end_time = availability.end_time
+#                 existing.is_working_day = availability.is_working_day
+#                 existing.save()
+#                 messages.success(request, f'Availability for {existing.get_day_of_week_display()} updated!')
+#             else:
+#                 availability.save()
+#                 messages.success(request, f'Availability for {availability.get_day_of_week_display()} added!')
+            
+#             return redirect('profile_availability')
+#     else:
+#         form = AvailabilityForm()
+    
+#     days_of_week = dict(UserAvailability._meta.get_field('day_of_week').choices)
+    
+#     return render(request, 'users/availability.html', {
+#         'availabilities': availabilities,
+#         'form': form,
+#         'days_of_week': days_of_week,
+#     })
+
+
+@login_required
+def delete_availability(request, availability_id):
+    """Delete a specific availability entry"""
+    availability = get_object_or_404(UserAvailability, id=availability_id, user=request.user)
+    
+    if request.method == 'POST':
+        day_name = availability.get_day_of_week_display()
+        availability.delete()
+        messages.success(request, f'Availability for {day_name} removed!')
+    
+    return redirect('users:profile_availability')
+
+@login_required
+def set_default_availability(request):
+    """Set default availability based on user's work hours"""
+    if request.method == 'POST':
+        # Delete existing availabilities
+        UserAvailability.objects.filter(user=request.user).delete()
+        
+        # Create new availabilities for work days
+        work_days = request.user.get_working_days_list()
+        day_mapping = {
+            'monday': 0, 'tuesday': 1, 'wednesday': 2, 'thursday': 3,
+            'friday': 4, 'saturday': 5, 'sunday': 6
+        }
+        
+        for day_name in work_days:
+            day_number = day_mapping.get(day_name.lower())
+            if day_number is not None:
+                UserAvailability.objects.create(
+                    user=request.user,
+                    day_of_week=day_number,
+                    start_time=request.user.workday_start,
+                    end_time=request.user.workday_end,
+                    is_working_day=True
+                )
+        
+        messages.success(request, 'Default availability schedule set based on your work hours!')
+    
+    return redirect('users:profile_availability')
+
 
 @login_required
 def team_list(request):
+    """List all teams the user belongs to"""
     user_teams = Team.objects.filter(members=request.user)
     public_teams = Team.objects.filter(is_public=True).exclude(members=request.user)
-    
+    # teams = Team.objects.filter(members=request.user).annotate(
+    #     member_count=Count('members'),
+    #     project_count=Count('project', distinct=True),
+    #     channel_count=Count('channels', distinct=True)  # Add this if you have the channels relation
+    # )
     return render(request, 'users/team_list.html', {
-        'user_teams': user_teams,
+        'teams': user_teams,
         'public_teams': public_teams,
     })
 
@@ -235,13 +394,20 @@ def team_invite(request, team_id):
             else:
                 messages.warning(request, 'No invitations were sent.')
             
-            return redirect('team_detail', team_id=team_id)
+            return redirect('users:team_detail', team_id=team_id)
     else:
         form = InvitationForm()
+
+    pending_invitations = Invitation.objects.filter(
+        team=team,
+        status='pending',
+        expires_at__gt=timezone.now()
+    )
     
     return render(request, 'users/team_invite.html', {
         'team': team,
         'form': form,
+        'pending_invitations': pending_invitations,
     })
 
 @login_required
@@ -255,6 +421,61 @@ def invitations_list(request):
     return render(request, 'users/invitations_list.html', {
         'pending_invitations': pending_invitations,
     })
+
+
+def send_invitation_email(invitation, request):
+    subject = f'Invitation to join team "{invitation.team.name}"'
+    
+    # Build absolute URL for invitation acceptance
+    accept_url = request.build_absolute_uri(
+        f'/users/invitations/{invitation.token}/accept/'
+    )
+    
+    context = {
+        'team': invitation.team,
+        'invited_by': invitation.invited_by,
+        'accept_url': accept_url,
+        'expires_at': invitation.expires_at,
+    }
+    
+    message = render_to_string('users/email/invitation.txt', context)
+    html_message = render_to_string('users/email/invitation.html', context)
+    
+    send_mail(
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,
+        [invitation.email],
+        html_message=html_message,
+        fail_silently=False,
+    )
+
+
+@login_required
+def invitation_cancel(request, invitation_id):
+    invitation = get_object_or_404(Invitation, id=invitation_id)
+
+    # Only admins or managers of that team may cancel
+    membership = TeamMembership.objects.filter(
+        team=invitation.team,
+        user=request.user
+    ).first()
+
+    if not membership or membership.role not in ['admin', 'manager']:
+        messages.error(request, "You do not have permission to cancel this invitation.")
+        return redirect('users:team_detail', team_id=invitation.team.id)
+
+    if invitation.status != 'pending':
+        messages.warning(request, "This invitation is no longer active.")
+        return redirect('users:team_invite', team_id=invitation.team.id)
+
+    # Cancel it
+    invitation.status = 'expired'
+    invitation.save()
+
+    messages.success(request, f"Invitation to {invitation.email} has been cancelled.")
+    return redirect('users:team_invite', team_id=invitation.team.id)
+
 
 @login_required
 def invitation_respond(request, token, action):
@@ -283,30 +504,3 @@ def invitation_respond(request, token, action):
         messages.info(request, f'You have declined the invitation to join "{invitation.team.name}".')
     
     return redirect('dashboard')
-
-def send_invitation_email(invitation, request):
-    subject = f'Invitation to join team "{invitation.team.name}"'
-    
-    # Build absolute URL for invitation acceptance
-    accept_url = request.build_absolute_uri(
-        f'/users/invitations/{invitation.token}/accept/'
-    )
-    
-    context = {
-        'team': invitation.team,
-        'invited_by': invitation.invited_by,
-        'accept_url': accept_url,
-        'expires_at': invitation.expires_at,
-    }
-    
-    message = render_to_string('users/email/invitation.txt', context)
-    html_message = render_to_string('users/email/invitation.html', context)
-    
-    send_mail(
-        subject,
-        message,
-        settings.DEFAULT_FROM_EMAIL,
-        [invitation.email],
-        html_message=html_message,
-        fail_silently=False,
-    )

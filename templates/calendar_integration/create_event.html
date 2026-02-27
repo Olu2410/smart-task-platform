@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+{% load django_bootstrap5 %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-plus text-primary"></i> Create New Event
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'calendar:calendar_view' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Calendar
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Event Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="title" class="form-label">Event Title *</label>
+                                <input type="text" class="form-control" id="title" name="title" required 
+                                       placeholder="Meeting with team, Work on project, etc.">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="event_type" class="form-label">Event Type</label>
+                                <select class="form-select" id="event_type" name="event_type">
+                                    <option value="task">Task Work</option>
+                                    <option value="meeting">Meeting</option>
+                                    <option value="focus_block">Focus Time</option>
+                                    <option value="break">Break</option>
+                                    <option value="personal">Personal</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" 
+                                  placeholder="Add details, agenda, or notes..."></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="start_time" class="form-label">Start Time *</label>
+                                <input type="datetime-local" class="form-control" id="start_time" name="start_time" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="end_time" class="form-label">End Time *</label>
+                                <input type="datetime-local" class="form-control" id="end_time" name="end_time" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="task_id" class="form-label">Link to Task (Optional)</label>
+                                <select class="form-select" id="task_id" name="task_id">
+                                    <option value="">No task linked</option>
+                                    {% for task in tasks %}
+                                    <option value="{{ task.id }}">{{ task.title }} ({{ task.project.name }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="color" class="form-label">Color</label>
+                                <div class="color-picker">
+                                    <div class="btn-group" role="group">
+                                        <input type="radio" class="btn-check" name="color" id="color-blue" value="#3788d8" checked>
+                                        <label class="btn btn-outline-primary" for="color-blue" style="background-color: #3788d8;"></label>
+                                        
+                                        <input type="radio" class="btn-check" name="color" id="color-green" value="#10b981">
+                                        <label class="btn btn-outline-success" for="color-green" style="background-color: #10b981;"></label>
+                                        
+                                        <input type="radio" class="btn-check" name="color" id="color-red" value="#dc2626">
+                                        <label class="btn btn-outline-danger" for="color-red" style="background-color: #dc2626;"></label>
+                                        
+                                        <input type="radio" class="btn-check" name="color" id="color-purple" value="#8b5cf6">
+                                        <label class="btn btn-outline-primary" for="color-purple" style="background-color: #8b5cf6;"></label>
+                                        
+                                        <input type="radio" class="btn-check" name="color" id="color-orange" value="#ea580c">
+                                        <label class="btn btn-outline-warning" for="color-orange" style="background-color: #ea580c;"></label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-check form-switch mb-4">
+                        <input class="form-check-input" type="checkbox" id="is_all_day" name="is_all_day">
+                        <label class="form-check-label" for="is_all_day">
+                            All-day event
+                        </label>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Create Event
+                        </button>
+                        <a href="{% url 'calendar:calendar_view' %}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Quick Scheduling -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Quick Scheduling</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Find available time slots for your event:</p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <label for="duration" class="form-label">Duration (hours)</label>
+                        <select class="form-select" id="duration">
+                            <option value="0.5">30 minutes</option>
+                            <option value="1" selected>1 hour</option>
+                            <option value="1.5">1.5 hours</option>
+                            <option value="2">2 hours</option>
+                            <option value="3">3 hours</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">&nbsp;</label>
+                        <button type="button" id="findSlots" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-search"></i> Find Available Slots
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="availableSlots" class="mt-3" style="display: none;">
+                    <h6>Available Time Slots:</h6>
+                    <div id="slotsList" class="list-group"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default times (next hour)
+    const now = new Date();
+    const startTime = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour from now
+    const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // 2 hours from now
+    
+    document.getElementById('start_time').value = startTime.toISOString().slice(0, 16);
+    document.getElementById('end_time').value = endTime.toISOString().slice(0, 16);
+    
+    // Find available slots
+    document.getElementById('findSlots').addEventListener('click', function() {
+        const duration = document.getElementById('duration').value;
+        
+        fetch(`{% url 'calendar:get_available_slots' %}?duration=${duration}&days=7`)
+            .then(response => response.json())
+            .then(data => {
+                const slotsList = document.getElementById('slotsList');
+                const availableSlots = document.getElementById('availableSlots');
+                
+                slotsList.innerHTML = '';
+                
+                if (data.slots.length > 0) {
+                    data.slots.slice(0, 5).forEach(slot => {
+                        const start = new Date(slot.start);
+                        const end = new Date(slot.end);
+                        
+                        const slotElement = document.createElement('button');
+                        slotElement.type = 'button';
+                        slotElement.className = 'list-group-item list-group-item-action';
+                        slotElement.innerHTML = `
+                            ${start.toLocaleDateString()} 
+                            ${start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - 
+                            ${end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            <br>
+                            <small class="text-muted">${slot.duration.toFixed(1)} hours available</small>
+                        `;
+                        
+                        slotElement.addEventListener('click', function() {
+                            document.getElementById('start_time').value = start.toISOString().slice(0, 16);
+                            document.getElementById('end_time').value = new Date(start.getTime() + duration * 60 * 60 * 1000).toISOString().slice(0, 16);
+                        });
+                        
+                        slotsList.appendChild(slotElement);
+                    });
+                    
+                    availableSlots.style.display = 'block';
+                } else {
+                    slotsList.innerHTML = '<div class="list-group-item text-muted">No available slots found</div>';
+                    availableSlots.style.display = 'block';
+                }
+            });
+    });
+    
+    // All-day event toggle
+    document.getElementById('is_all_day').addEventListener('change', function() {
+        if (this.checked) {
+            document.getElementById('start_time').type = 'date';
+            document.getElementById('end_time').type = 'date';
+        } else {
+            document.getElementById('start_time').type = 'datetime-local';
+            document.getElementById('end_time').type = 'datetime-local';
+        }
+    });
+});
+</script>
+
+<style>
+.color-picker .btn {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+.color-picker .btn-check:checked + .btn {
+    border-width: 3px;
+    border-color: #000;
+}
+</style>
+{% endblock %}

@@ -319,3 +319,101 @@ def add_attachment(request, task_id):
             messages.success(request, 'File uploaded successfully!')
     
     return redirect('tasks:task_detail', pk=task_id)
+
+
+
+@login_required
+def update_task_status(request):
+    """AJAX view to update task status (for drag & drop)"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            task_id = data.get('task_id')
+            new_status = data.get('status')
+            old_status = data.get('old_status')
+            
+            task = get_object_or_404(Task, pk=task_id)
+            
+            # Check if user has access to this task
+            if not task.project.team.members.filter(id=request.user.id).exists():
+                return JsonResponse({'success': False, 'error': 'Permission denied'})
+            
+            # Validate status
+            valid_statuses = [choice[0] for choice in Task.STATUS_CHOICES]
+            if new_status not in valid_statuses:
+                return JsonResponse({'success': False, 'error': 'Invalid status'})
+            
+            # Update task status
+            task.status = new_status
+            
+            # Set order to be last in the new column
+            last_task = Task.objects.filter(
+                project=task.project,
+                status=new_status
+            ).order_by('-order').first()
+            task.order = (last_task.order + 1) if last_task else 0
+            
+            task.save()
+            
+            # Log the status change
+            print(f"Task '{task.title}' status changed from {old_status} to {new_status} by {request.user.username}")
+            
+            return JsonResponse({
+                'success': True, 
+                'new_status': new_status,
+                'task_title': task.title
+            })
+            
+        except Exception as e:
+            print(f"Error updating task status: {str(e)}")
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+# @login_required
+# def update_task_status(request):
+#     """AJAX view to update task status (for drag & drop)"""
+#     if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
+#         try:
+#             data = json.loads(request.body)
+#             task_id = data.get('task_id')
+#             new_status = data.get('status')
+#             old_status = data.get('old_status')
+            
+#             task = get_object_or_404(Task, pk=task_id)
+            
+#             # Check if user has access to this task
+#             if not task.project.team.members.filter(id=request.user.id).exists():
+#                 return JsonResponse({'success': False, 'error': 'Permission denied'})
+            
+#             # Validate status
+#             valid_statuses = [choice[0] for choice in Task.STATUS_CHOICES]
+#             if new_status not in valid_statuses:
+#                 return JsonResponse({'success': False, 'error': 'Invalid status'})
+            
+#             # Update task status
+#             task.status = new_status
+            
+#             # Set order to be last in the new column
+#             last_task = Task.objects.filter(
+#                 project=task.project,
+#                 status=new_status
+#             ).order_by('-order').first()
+#             task.order = (last_task.order + 1) if last_task else 0
+            
+#             task.save()
+            
+#             # Log the status change
+#             print(f"Task '{task.title}' status changed from {old_status} to {new_status} by {request.user.username}")
+            
+#             return JsonResponse({
+#                 'success': True, 
+#                 'new_status': new_status,
+#                 'task_title': task.title
+#             })
+            
+#         except Exception as e:
+#             print(f"Error updating task status: {str(e)}")
+#             return JsonResponse({'success': False, 'error': str(e)})
+    
+#     return JsonResponse({'success': False, 'error': 'Invalid request'})

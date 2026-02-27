@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">AI Suggestions</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'ai_coach:generate_weekly_plan' %}" class="btn btn-outline-primary">
+            <i class="fas fa-calendar-week"></i> Weekly Plan
+        </a>
+        <a href="{% url 'ai_coach:workload_analysis' %}" class="btn btn-outline-info ms-2">
+            <i class="fas fa-chart-pie"></i> Workload Analysis
+        </a>
+    </div>
+</div>
+
+{% if suggestions %}
+<div class="row">
+    {% for suggestion in suggestions %}
+    <div class="col-md-6 mb-4">
+        <div class="card ai-suggestion">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="fas fa-robot"></i> {{ suggestion.get_suggestion_type_display }}
+                </h6>
+                <span class="badge bg-primary">{{ suggestion.confidence_score|floatformat:2 }} confidence</span>
+            </div>
+            <div class="card-body">
+                <h6 class="card-title">
+                    <a href="{% url 'tasks:task_detail' suggestion.task.id %}">
+                        {{ suggestion.task.title }}
+                    </a>
+                </h6>
+                <p class="card-text">{{ suggestion.suggestion }}</p>
+                <p class="text-muted small">{{ suggestion.reasoning }}</p>
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        Project: {{ suggestion.task.project.name }}
+                    </small>
+                    <div>
+                        <form method="post" action="{% url 'ai_coach:apply_suggestion' suggestion.id %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-success">
+                                <i class="fas fa-check"></i> Apply
+                            </button>
+                        </form>
+                        <form method="post" action="{% url 'ai_coach:dismiss_suggestion' suggestion.id %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-times"></i> Dismiss
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="fas fa-robot fa-3x text-muted mb-3"></i>
+    <h3>No AI Suggestions Yet</h3>
+    <p class="text-muted">AI suggestions will appear here as they are generated for your tasks.</p>
+    <a href="{% url 'tasks:task_board' %}" class="btn btn-primary">Go to Task Board</a>
+</div>
+{% endif %}
+{% endblock %}

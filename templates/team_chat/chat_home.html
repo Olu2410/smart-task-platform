@@ -1,0 +1,424 @@
+<!--  templates/team_chat/chat_home.html -->
+{% extends 'base.html' %}
+
+{% block title %}Team Chat - Start Conversation{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 mt-3">
+        <div>
+            <h1 class="h3 mb-2">
+                <i class="fas fa-comments text-primary me-2"></i>Team Chat
+            </h1>
+            <p class="text-muted">Chat with your team members in real-time</p>
+        </div>
+        <div>
+            {% if user_teams %}
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createChannelModal">
+                <i class="fas fa-plus"></i> Create Channel
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if not user_teams %}
+    <!-- No Teams State -->
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-lg">
+                <div class="card-body text-center p-5">
+                    <div class="mb-4">
+                        <i class="fas fa-users fa-4x text-muted mb-4"></i>
+                        <h3 class="h4 mb-3">You're not in any teams yet</h3>
+                        <p class="text-muted mb-4">Join or create a team to start chatting with your teammates.</p>
+                    </div>
+                    <div class="d-grid gap-3 col-lg-8 mx-auto">
+                        <a href="{% url 'users:team_create' %}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-plus me-2"></i>Create Your First Team
+                        </a>
+                        <a href="{% url 'users:team_list' %}" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-search me-2"></i>Browse Teams
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% elif not has_channels %}
+    <!-- Teams but No Channels -->
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card border-0 shadow">
+                <div class="card-body p-5">
+                    <div class="text-center mb-5">
+                        <i class="fas fa-hashtag fa-4x text-primary mb-4"></i>
+                        <h3 class="h4 mb-3">Create Your First Channel</h3>
+                        <p class="text-muted">Start a conversation in one of your {{ team_count }} teams</p>
+                    </div>
+                    
+                    <div class="row">
+                        {% for team in user_teams %}
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100 border">
+                                <div class="card-body text-center">
+                                    <div class="avatar-lg bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3">
+                                        <i class="fas fa-users"></i>
+                                    </div>
+                                    <h5 class="card-title">{{ team.name }}</h5>
+                                    <p class="card-text text-muted small">{{ team.members.count }} members</p>
+                                    <button class="btn btn-primary create-channel-btn" data-team-id="{{ team.id }}">
+                                        <i class="fas fa-hashtag me-1"></i>Create Channel in {{ team.name }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Teams with Channels -->
+    <div class="row">
+        <!-- Teams List -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users me-2"></i>Your Teams
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for team in user_teams %}
+                        <a href="{% url 'team_chat:channel_list' team.id %}" 
+                           class="list-group-item list-group-item-action border-0 py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">{{ team.name }}</h6>
+                                    <small class="text-muted">{{ team.channels.count }} channels • {{ team.members.count }} members</small>
+                                </div>
+                                <i class="fas fa-chevron-right text-muted"></i>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Start -->
+            <div class="card border-0 shadow">
+                <div class="card-body">
+                    <h6 class="mb-3">
+                        <i class="fas fa-bolt text-warning me-2"></i>Quick Start
+                    </h6>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary text-start" data-bs-toggle="modal" data-bs-target="#createChannelModal">
+                            <i class="fas fa-hashtag me-2"></i> New Channel
+                        </button>
+                        <a href="{% url 'users:team_create' %}" class="btn btn-outline-success text-start">
+                            <i class="fas fa-plus me-2"></i> New Team
+                        </a>
+                        <a href="{% url 'users:team_list' %}" class="btn btn-outline-secondary text-start">
+                            <i class="fas fa-cog me-2"></i> Manage Teams
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Channels & Recent Activity -->
+        <div class="col-lg-8">
+            <!-- Active Channels -->
+            <div class="card border-0 shadow mb-4">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-hashtag me-2"></i>Active Channels
+                    </h5>
+                    <a href="#" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for team in user_teams %}
+                        {% for channel in team.channels.all|slice:":2" %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card border h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-hashtag text-muted"></i> {{ channel.name }}
+                                        </h6>
+                                        <span class="badge bg-light text-dark">{{ channel.messages.count }} messages</span>
+                                    </div>
+                                    <p class="text-muted small mb-2">{{ channel.description|default:"No description"|truncatewords:10 }}</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            <i class="fas fa-users fa-xs"></i> {{ team.name }}
+                                        </small>
+                                        <a href="{% url 'team_chat:channel_detail' channel.id %}" class="btn btn-sm btn-primary">
+                                            Join Chat
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% endfor %}
+                    </div>
+                    
+                    {% if not has_channels %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-hashtag fa-3x text-muted mb-3"></i>
+                        <h6 class="text-muted">No channels yet</h6>
+                        <p class="text-muted small">Create a channel to start chatting</p>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createChannelModal">
+                            <i class="fas fa-plus"></i> Create First Channel
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- How to Chat -->
+            <div class="card border-0 shadow">
+                <div class="card-body">
+                    <h5 class="mb-3">
+                        <i class="fas fa-question-circle text-info me-2"></i>How to Start Chatting
+                    </h5>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="text-center p-3">
+                                <div class="avatar-lg bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3">
+                                    <i class="fas fa-1"></i>
+                                </div>
+                                <h6>Join a Team</h6>
+                                <p class="text-muted small">Join an existing team or create your own</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="text-center p-3">
+                                <div class="avatar-lg bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3">
+                                    <i class="fas fa-2"></i>
+                                </div>
+                                <h6>Create Channel</h6>
+                                <p class="text-muted small">Create a channel for specific topics or projects</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="text-center p-3">
+                                <div class="avatar-lg bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3">
+                                    <i class="fas fa-3"></i>
+                                </div>
+                                <h6>Start Chatting</h6>
+                                <p class="text-muted small">Send messages, share files, and collaborate in real-time</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Create Channel Modal -->
+<div class="modal fade" id="createChannelModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Channel</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                {% if user_teams %}
+                <form id="createChannelForm">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <h6 class="mb-3">Step 1: Select a Team</h6>
+                        <div class="row">
+                            {% for team in user_teams %}
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check card-option">
+                                    <input class="form-check-input" type="radio" name="team_id" 
+                                           id="team{{ team.id }}" value="{{ team.id }}" 
+                                           {% if forloop.first %}checked{% endif %}>
+                                    <label class="form-check-label w-100" for="team{{ team.id }}">
+                                        <div class="card border">
+                                            <div class="card-body">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                                        <i class="fas fa-users"></i>
+                                                    </div>
+                                                    <div>
+                                                        <h6 class="mb-1">{{ team.name }}</h6>
+                                                        <small class="text-muted">{{ team.members.count }} members</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="mb-3">Step 2: Channel Details</h6>
+                        <div class="mb-3">
+                            <label class="form-label">Channel Name</label>
+                            <input type="text" class="form-control" id="channelName" required 
+                                   placeholder="e.g., general, announcements, random">
+                            <div class="form-text">Use lowercase letters, numbers, and dashes only</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description (Optional)</label>
+                            <textarea class="form-control" id="channelDescription" 
+                                      rows="2" placeholder="What's this channel about?"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="isPrivate">
+                                <label class="form-check-label" for="isPrivate">
+                                    <i class="fas fa-lock me-1"></i> Make this a private channel
+                                </label>
+                                <div class="form-text">Private channels require an invitation to join</div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">You need to join a team first</h5>
+                    <p class="text-muted">Create or join a team to start chatting</p>
+                    <a href="{% url 'users:team_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Create Team
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                {% if user_teams %}
+                <button type="button" class="btn btn-primary" id="createChannelBtn">
+                    <i class="fas fa-plus"></i> Create Channel
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .avatar-lg {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+    }
+    
+    .avatar-sm {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+    
+    .card-option .form-check-input {
+        position: absolute;
+        left: 10px;
+        top: 10px;
+    }
+    
+    .card-option .card {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .card-option input:checked + label .card {
+        border-color: #007bff;
+        box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+    }
+    
+    .card-option .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .create-channel-btn {
+        transition: all 0.2s ease;
+    }
+    
+    .create-channel-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Create channel button
+        document.getElementById('createChannelBtn').addEventListener('click', function() {
+            const selectedTeam = document.querySelector('input[name="team_id"]:checked');
+            const channelName = document.getElementById('channelName').value;
+            const description = document.getElementById('channelDescription').value;
+            const isPrivate = document.getElementById('isPrivate').checked;
+            
+            if (!selectedTeam || !channelName) {
+                alert('Please select a team and enter a channel name');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('name', channelName);
+            formData.append('description', description);
+            formData.append('is_private', isPrivate);
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+            
+            fetch(`/team-chat/team/${parseInt(selectedTeam.value)}/create-channel/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('createChannelModal')).hide();
+                    // Redirect to the new channel
+                    window.location.href = `/team-chat/channel/${data.channel_id}/`;
+                } else {
+                    alert('Error creating channel: ' + (data.errors || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error creating channel');
+            });
+        });
+        
+        // Quick create channel buttons
+        document.querySelectorAll('.create-channel-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const teamId = this.dataset.teamId;
+                document.getElementById(`team${teamId}`).checked = true;
+                bootstrap.Modal.getInstance(document.getElementById('createChannelModal') || 
+                    new bootstrap.Modal(document.getElementById('createChannelModal'))).show();
+            });
+        });
+        
+        // Auto-focus on channel name input when modal opens
+        const createChannelModal = document.getElementById('createChannelModal');
+        if (createChannelModal) {
+            createChannelModal.addEventListener('shown.bs.modal', function () {
+                document.getElementById('channelName').focus();
+            });
+        }
+    });
+</script>
+{% endblock %}

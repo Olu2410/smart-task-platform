@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ team.name }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        {% if membership.role in 'admin,manager' %}
+        <a href="{% url 'users:team_invite' team.id %}" class="btn btn-primary">
+            <i class="fas fa-user-plus"></i> Invite Members
+        </a>
+        {% endif %}
+        <a href="{% url 'users:team_list' %}" class="btn btn-outline-secondary ms-2">
+            <i class="fas fa-arrow-left"></i> Back to Teams
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Team Details</h5>
+            </div>
+            <div class="card-body">
+                <p>{{ team.description }}</p>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Created by:</strong> {{ team.created_by.get_full_name|default:team.created_by.username }}</p>
+                        <p><strong>Created on:</strong> {{ team.created_at|date:"M d, Y" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Visibility:</strong> 
+                            {% if team.is_public %}
+                                <span class="badge bg-success">Public</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Private</span>
+                            {% endif %}
+                        </p>
+                        <p><strong>Join Policy:</strong> 
+                            {% if team.allow_self_join %}
+                                <span class="badge bg-info">Open</span>
+                            {% else %}
+                                <span class="badge bg-warning">By Invitation</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Team Members</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for member in members %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">{{ member.user.get_full_name|default:member.user.username }}</h6>
+                            <p class="mb-1 text-muted">{{ member.user.email }}</p>
+                            <small class="text-muted">{{ member.user.job_title }}</small>
+                        </div>
+                        <div>
+                            <span class="badge bg-{% if member.role == 'admin' %}danger{% elif member.role == 'manager' %}warning{% else %}primary{% endif %}">
+                                {{ member.get_role_display }}
+                            </span>
+                            <small class="text-muted d-block mt-1">Joined {{ member.joined_at|date:"M d, Y" }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Invitations -->
+        {% if pending_invitations %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0 text-info">Pending Invitations</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Invited By</th>
+                                <th>Expires</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for invitation in pending_invitations %}
+                            <tr>
+                                <td>{{ invitation.email }}</td>
+                                <td>
+                                    <span class="badge bg-{% if invitation.role == 'admin' %}danger{% elif invitation.role == 'manager' %}warning{% else %}primary{% endif %}">
+                                        {{ invitation.get_role_display }}
+                                    </span>
+                                </td>
+                                <td>{{ invitation.invited_by.get_full_name|default:invitation.invited_by.username }}</td>
+                                <td>{{ invitation.expires_at|date:"M d, Y" }}</td>
+                                <td>
+                                    <span class="badge bg-warning">{{ invitation.get_status_display }}</span>
+                                </td>
+                                <td>
+                                    <!-- Cancel button (only for pending) -->
+                                    {% if invitation.status == "pending" %}
+                                    <a href="{% url 'users:invitation_cancel' invitation.id %}"
+                                    class="badge bg-danger text-decoration-none"
+                                    onclick="return confirm('Cancel this invitation?');">
+                                        Cancel
+                                    </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Your Role</h5>
+            </div>
+            <div class="card-body">
+                <p>You are a <strong>{{ membership.get_role_display }}</strong> in this team.</p>
+                
+                {% if membership.role in 'admin,manager' %}
+                <div class="alert alert-info">
+                    <h6>Team Management</h6>
+                    <p>As a {{ membership.get_role_display }}, you can:</p>
+                    <ul class="small">
+                        <li>Invite new members</li>
+                        {% if membership.role == 'admin' %}
+                        <li>Edit team settings</li>
+                        <li>Remove members</li>
+                        {% endif %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'tasks:create_project' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-folder-plus"></i> Create Project
+                    </a>
+                    <a href="{% url 'tasks:task_board' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-tasks"></i> View Team Tasks
+                    </a>
+                    {% if membership.role in 'admin,manager' %}
+                    <a href="{% url 'users:team_invite' team.id %}" class="btn btn-outline-success">
+                        <i class="fas fa-user-plus"></i> Invite Members
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

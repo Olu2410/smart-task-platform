@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+{% load django_bootstrap5 %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">My Availability</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'users:profile' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Profile
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- Quick Schedule Setup -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Quick Schedule Setup</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="bulkAvailabilityForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="bulk_update" value="true">
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label">Work Days</label>
+                            <div class="mb-3">
+                                {% for day_num, day_name in days_of_week.items %}
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input day-checkbox" type="checkbox" 
+                                           id="day-{{ day_num }}" value="{{ day_num }}">
+                                    <label class="form-check-label" for="day-{{ day_num }}">
+                                        {{ day_name }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label class="form-label">Start Time</label>
+                            <input type="time" name="start_time" class="form-control" value="{{ default_start }}" required>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label class="form-label">End Time</label>
+                            <input type="time" name="end_time" class="form-control" value="{{ default_end }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Apply to Selected Days
+                        </button>
+                        <button type="button" id="selectWorkDays" class="btn btn-outline-secondary">
+                            Select Work Days
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Current Availability -->
+        <div class="card mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Current Availability</h5>
+                <form method="post" action="{% url 'users:set_default_availability' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-sync"></i> Set Default Schedule
+                    </button>
+                </form>
+            </div>
+            <div class="card-body">
+                {% if availabilities %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Day</th>
+                                <th>Start Time</th>
+                                <th>End Time</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for availability in availabilities %}
+                            <tr>
+                                <td>
+                                    <strong>{{ availability.get_day_of_week_display }}</strong>
+                                </td>
+                                <td>{{ availability.start_time|time:"H:i" }}</td>
+                                <td>{{ availability.end_time|time:"H:i" }}</td>
+                                <td>
+                                    {% if availability.is_working_day %}
+                                    <span class="badge bg-success">Working</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Unavailable</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <form method="post" action="{% url 'users:delete_availability' availability.id %}" 
+                                          style="display: inline;" 
+                                          onsubmit="return confirm('Remove availability for {{ availability.get_day_of_week_display }}?')">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-clock fa-3x text-muted mb-3"></i>
+                    <h5>No Availability Set</h5>
+                    <p class="text-muted">Set your working hours to help with task scheduling and team coordination.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Individual Day Settings -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Edit Specific Day</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {% bootstrap_form form %}
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-save"></i> Save Day Settings
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Availability Guide -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">About Availability</h5>
+            </div>
+            <div class="card-body">
+                <h6>Why set availability?</h6>
+                <ul class="small">
+                    <li>Helps team members know when you're working</li>
+                    <li>AI assistant uses this for task scheduling</li>
+                    <li>Improves meeting scheduling across timezones</li>
+                    <li>Helps prevent work outside your preferred hours</li>
+                </ul>
+                
+                <h6 class="mt-3">Best Practices:</h6>
+                <ul class="small">
+                    <li>Set realistic working hours</li>
+                    <li>Update when your schedule changes</li>
+                    <li>Consider timezone differences with teammates</li>
+                    <li>Mark days off as unavailable</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Select work days button
+    document.getElementById('selectWorkDays').addEventListener('click', function() {
+        const workDays = [0, 1, 2, 3, 4]; // Monday to Friday
+        workDays.forEach(day => {
+            const checkbox = document.getElementById('day-' + day);
+            if (checkbox) {
+                checkbox.checked = true;
+            }
+        });
+    });
+    
+    // Update hidden field with selected days
+    document.getElementById('bulkAvailabilityForm').addEventListener('submit', function() {
+        const selectedDays = [];
+        document.querySelectorAll('.day-checkbox:checked').forEach(checkbox => {
+            selectedDays.push(checkbox.value);
+        });
+        
+        const daysInput = document.createElement('input');
+        daysInput.type = 'hidden';
+        daysInput.name = 'days';
+        daysInput.value = selectedDays.join(',');
+        this.appendChild(daysInput);
+    });
+});
+</script>
+{% endblock %}

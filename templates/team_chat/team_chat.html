@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-comments text-primary"></i> {{ team.name }} Chat
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'chat:create_channel' team.id %}" class="btn btn-sm btn-primary me-2">
+            <i class="fas fa-plus"></i> New Channel
+        </a>
+        <a href="{% url 'users:team_detail' team.id %}" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Team
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Sidebar with channels -->
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Channels</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    <a href="{% url 'chat:team_chat' team.id %}" 
+                       class="list-group-item list-group-item-action {% if chat_room.name == 'general' %}active{% endif %}">
+                        <i class="fas fa-hashtag"></i> #general
+                        {% if unread_counts|get_item:chat_room.id > 0 and chat_room.name != 'general' %}
+                        <span class="badge bg-danger float-end">{{ unread_counts|get_item:chat_room.id }}</span>
+                        {% endif %}
+                    </a>
+                    
+                    {% for room in other_rooms %}
+                    <a href="{% url 'chat:team_chat' team.id %}" 
+                       class="list-group-item list-group-item-action">
+                        {% if room.is_private %}
+                        <i class="fas fa-lock"></i>
+                        {% else %}
+                        <i class="fas fa-hashtag"></i>
+                        {% endif %}
+                        {{ room.name }}
+                        {% if unread_counts|get_item:room.id > 0 %}
+                        <span class="badge bg-danger float-end">{{ unread_counts|get_item:room.id }}</span>
+                        {% endif %}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Online Members -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">Team Members</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush" id="onlineUsers">
+                    <!-- Will be populated by WebSocket -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Chat Area -->
+    <div class="col-md-9">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-0">
+                        <i class="fas fa-hashtag"></i> {{ chat_room.name }}
+                    </h5>
+                    <small class="text-muted">{{ chat_room.description }}</small>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#searchModal">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" id="chatSettings">
+                        <i class="fas fa-cog"></i> Settings
+                    </button>
+                </div>
+            </div>
+
+            <!-- Messages Container -->
+            <div class="card-body p-0">
+                <div class="chat-container" id="chatContainer">
+                    <div id="messagesContainer" style="height: 500px; overflow-y: auto;">
+                        <!-- Messages will be loaded here -->
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading messages...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Typing Indicator -->
+                <div id="typingIndicator" class="px-3 py-2" style="display: none;">
+                    <small class="text-muted">
+                        <span id="typingUsers"></span

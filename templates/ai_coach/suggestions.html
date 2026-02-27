@@ -1,0 +1,299 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-robot text-primary"></i> AI Task Coach
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'ai_coach:generate_weekly_plan' %}" class="btn btn-outline-primary">
+            <i class="fas fa-calendar-week"></i> Weekly Plan
+        </a>
+        <a href="{% url 'ai_coach:workload_analysis' %}" class="btn btn-outline-info ms-2">
+            <i class="fas fa-chart-pie"></i> Workload Analysis
+        </a>
+        <a href="{% url 'ai_coach:analyze_all_tasks' %}" class="btn btn-primary ms-2">
+            <i class="fas fa-magic"></i> Analyze My Tasks
+        </a>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-bolt"></i> Priority Analysis
+                </h5>
+                <p class="card-text">Get AI suggestions for task priorities based on due dates and importance.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-clock"></i> Timing Suggestions
+                </h5>
+                <p class="card-text">Optimize your schedule with AI-powered timing recommendations.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-users"></i> Workload Balance
+                </h5>
+                <p class="card-text">Analyze team workload distribution and get balancing suggestions.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Suggestions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-lightbulb"></i> AI Suggestions
+                    <span class="badge bg-primary ms-2">{{ suggestions.count }}</span>
+                </h5>
+                <div>
+                    <a href="{% url 'ai_coach:ai_settings' %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-cog"></i> Settings
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if suggestions %}
+                <div class="row">
+                    {% for suggestion in suggestions %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100 ai-suggestion">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-{{ suggestion.suggestion_type|default:'lightbulb' }}"></i>
+                                    {{ suggestion.get_suggestion_type_display }}
+                                </h6>
+                                <div>
+                                    <span class="badge bg-primary">{{ suggestion.confidence_score|floatformat:2 }}</span>
+                                    <span class="badge bg-{{ suggestion.task.priority }} ms-1">{{ suggestion.task.get_priority_display }}</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <a href="{% url 'tasks:task_detail' suggestion.task.id %}" class="text-decoration-none">
+                                        {{ suggestion.task.title }}
+                                    </a>
+                                </h6>
+                                <p class="card-text">{{ suggestion.suggestion }}</p>
+                                <p class="text-muted small">{{ suggestion.reasoning }}</p>
+                                
+                                {% if suggestion.metadata.suggested_actions %}
+                                <div class="mt-2">
+                                    <strong>Suggested Actions:</strong>
+                                    <ul class="small mb-2">
+                                        {% for action in suggestion.metadata.suggested_actions %}
+                                        <li>{{ action }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+                                
+                                <div class="d-flex justify-content-between align-items-center mt-3">
+                                    <small class="text-muted">
+                                        Project: {{ suggestion.task.project.name }}
+                                        {% if suggestion.task.due_date %}
+                                        • Due: {{ suggestion.task.due_date|date:"M d" }}
+                                        {% endif %}
+                                    </small>
+                                    <div>
+                                        <form method="post" action="{% url 'ai_coach:apply_suggestion' suggestion.id %}" style="display: inline;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-success">
+                                                <i class="fas fa-check"></i> Apply
+                                            </button>
+                                        </form>
+                                        <form method="post" action="{% url 'ai_coach:dismiss_suggestion' suggestion.id %}" style="display: inline;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                                <i class="fas fa-times"></i> Dismiss
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-robot fa-3x text-muted mb-3"></i>
+                    <h4>No AI Suggestions Yet</h4>
+                    <p class="text-muted">
+                        AI suggestions will appear here as they are generated for your tasks.
+                        You can trigger analysis for your tasks or they will be generated automatically.
+                    </p>
+                    <div class="mt-3">
+                        <a href="{% url 'ai_coach:analyze_all_tasks' %}" class="btn btn-primary">
+                            <i class="fas fa-magic"></i> Analyze My Tasks
+                        </a>
+                        <a href="{% url 'tasks:task_board' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-tasks"></i> View Tasks
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Task Analysis Section -->
+{% if user_tasks %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Quick Task Analysis</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Task</th>
+                                <th>Priority</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for task in user_tasks|slice:":5" %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'tasks:task_detail' task.id %}">{{ task.title }}</a>
+                                    <br>
+                                    <small class="text-muted">{{ task.project.name }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ task.priority }}">{{ task.get_priority_display }}</span>
+                                </td>
+                                <td>
+                                    {% if task.due_date %}
+                                    {{ task.due_date|date:"M d, Y" }}
+                                    {% else %}
+                                    <span class="text-muted">No due date</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ task.get_status_display }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="#" class="btn btn-outline-primary analyze-task" 
+                                           data-task-id="{{ task.id }}" data-analysis-type="priority">
+                                            <i class="fas fa-bolt"></i> Priority
+                                        </a>
+                                        <a href="#" class="btn btn-outline-success analyze-task" 
+                                           data-task-id="{{ task.id }}" data-analysis-type="timing">
+                                            <i class="fas fa-clock"></i> Timing
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Task analysis buttons
+    document.querySelectorAll('.analyze-task').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const taskId = this.dataset.taskId;
+            const analysisType = this.dataset.analysisType;
+            const button = this;
+            
+            // Show loading state
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+            button.disabled = true;
+            
+            fetch(`{% url 'ai_coach:analyze_task' 0 %}`.replace('0', taskId) + `?type=${analysisType}`)
+            .then(response => response.json())
+            .then(data => {
+                button.innerHTML = originalText;
+                button.disabled = false;
+                
+                if (data.success) {
+                    showNotification('AI analysis completed! Check suggestions list.', 'success');
+                    // Reload the page to show new suggestions
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showNotification('Analysis failed: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                button.innerHTML = originalText;
+                button.disabled = false;
+                showNotification('Network error during analysis', 'error');
+            });
+        });
+    });
+    
+    function showNotification(message, type) {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} alert-dismissible fade show`;
+        notification.style.position = 'fixed';
+        notification.style.top = '20px';
+        notification.style.right = '20px';
+        notification.style.zIndex = '9999';
+        notification.style.minWidth = '300px';
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+});
+</script>
+
+<style>
+.ai-suggestion {
+    border-left: 4px solid #17a2b8;
+    transition: all 0.3s ease;
+}
+
+.ai-suggestion:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.card.text-white .card-text {
+    opacity: 0.9;
+}
+</style>
+{% endblock %}

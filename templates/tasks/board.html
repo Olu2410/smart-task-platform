@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
-{% load django_bootstrap5 %}
+{% load static %}
 {% load task_extras %}
+
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Task Board</h1>
@@ -30,16 +31,19 @@
     {% for status in status_choices %}
     <div class="col-lg-3 col-md-6 mb-4">
         <div class="card">
-            <div class="card-header bg-light">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
                 <h6 class="mb-0">{{ status.1 }}</h6>
-                <span class="badge bg-secondary">{{ tasks_by_status|get_item:status.0|length }}</span>
+                <span class="badge bg-secondary" id="counter-{{ status.0 }}">{{ tasks_by_status|get_item:status.0|length }}</span>
             </div>
             <div class="card-body kanban-column" data-status="{{ status.0 }}" style="min-height: 400px;">
                 {% for task in tasks_by_status|get_item:status.0 %}
-                <div class="card task-card priority-{{ task.priority }} mb-3" data-task-id="{{ task.id }}">
+                <div class="card task-card priority-{{ task.priority }} mb-3" 
+                     data-task-id="{{ task.id }}" 
+                     data-task-status="{{ task.status }}"
+                     draggable="true">
                     <div class="card-body">
                         <h6 class="card-title">{{ task.title }}</h6>
-                        <p class="card-text small text-muted">{{ task.description|truncatewords:10 }}</p>
+                        <p class="card-text small text-muted">{{ task.description|truncatewords:10|default:"No description" }}</p>
                         <div class="d-flex justify-content-between align-items-center">
                             <small class="text-muted">
                                 {% if task.assigned_to %}
@@ -63,29 +67,292 @@
                     </div>
                 </div>
                 {% empty %}
-                <p class="text-muted text-center">No tasks</p>
+                <div class="text-center text-muted p-3 empty-column">
+                    <i class="fas fa-tasks fa-2x mb-2"></i>
+                    <p>No tasks</p>
+                </div>
                 {% endfor %}
             </div>
         </div>
     </div>
     {% endfor %}
 </div>
+
+<!-- Loading Spinner (hidden by default) -->
+<div id="loadingSpinner" class="text-center" style="display: none;">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2">Updating task...</p>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-// Simple project filtering
+// CSRF token setup for AJAX requests
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+const csrftoken = getCookie('csrftoken');
+
+// Drag and Drop Functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const taskCards = document.querySelectorAll('.task-card');
+    const columns = document.querySelectorAll('.kanban-column');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+
+    // Make task cards draggable
+    taskCards.forEach(card => {
+        card.addEventListener('dragstart', handleDragStart);
+        card.addEventListener('dragend', handleDragEnd);
+    });
+
+    // Set up columns as drop zones
+    columns.forEach(column => {
+        column.addEventListener('dragover', handleDragOver);
+        column.addEventListener('dragenter', handleDragEnter);
+        column.addEventListener('dragleave', handleDragLeave);
+        column.addEventListener('drop', handleDrop);
+    });
+
+    let draggedTask = null;
+
+    function handleDragStart(e) {
+        draggedTask = this;
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', this.dataset.taskId);
+        
+        // Add a small delay to ensure the drag image is captured properly
+        setTimeout(() => {
+            this.style.opacity = '0.4';
+        }, 0);
+    }
+
+    function handleDragEnd(e) {
+        this.classList.remove('dragging');
+        this.style.opacity = '1';
+        columns.forEach(column => column.classList.remove('drag-over'));
+        draggedTask = null;
+    }
+
+    function handleDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    }
+
+    function handleDragEnter(e) {
+        e.preventDefault();
+        this.classList.add('drag-over');
+    }
+
+    function handleDragLeave(e) {
+        this.classList.remove('drag-over');
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        this.classList.remove('drag-over');
+        
+        if (draggedTask) {
+            const taskId = draggedTask.dataset.taskId;
+            const newStatus = this.dataset.status;
+            const oldStatus = draggedTask.dataset.taskStatus;
+
+            // Show loading spinner
+            loadingSpinner.style.display = 'block';
+
+            // Update task status via AJAX
+            updateTaskStatus(taskId, newStatus, oldStatus, draggedTask, this);
+        }
+    }
+
+    // Update task counters
+    function updateColumnCounters() {
+        columns.forEach(column => {
+            const status = column.dataset.status;
+            const taskCount = column.querySelectorAll('.task-card').length;
+            const counterElement = document.getElementById(`counter-${status}`);
+            if (counterElement) {
+                counterElement.textContent = taskCount;
+            }
+            
+            // Show/hide empty column message
+            const emptyMessage = column.querySelector('.empty-column');
+            if (taskCount === 0) {
+                if (!emptyMessage) {
+                    column.innerHTML += `
+                        <div class="text-center text-muted p-3 empty-column">
+                            <i class="fas fa-tasks fa-2x mb-2"></i>
+                            <p>No tasks</p>
+                        </div>
+                    `;
+                }
+            } else {
+                if (emptyMessage) {
+                    emptyMessage.remove();
+                }
+            }
+        });
+    }
+
+    // AJAX function to update task status
+    function updateTaskStatus(taskId, newStatus, oldStatus, taskElement, targetColumn) {
+        fetch("{% url 'tasks:update_task_status' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken,
+            },
+            body: JSON.stringify({
+                task_id: taskId,
+                status: newStatus,
+                old_status: oldStatus
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            loadingSpinner.style.display = 'none';
+            
+            if (data.success) {
+                // Update the task element's data attribute
+                taskElement.dataset.taskStatus = newStatus;
+                
+                // Move the task element to the new column
+                targetColumn.appendChild(taskElement);
+                
+                // Update counters
+                updateColumnCounters();
+                
+                // Show success message
+                showNotification('Task moved successfully!', 'success');
+            } else {
+                showNotification('Error moving task: ' + data.error, 'error');
+                // Revert the task to its original position visually
+                const originalColumn = document.querySelector(`[data-status="${oldStatus}"]`);
+                if (originalColumn) {
+                    originalColumn.appendChild(taskElement);
+                }
+            }
+        })
+        .catch(error => {
+            loadingSpinner.style.display = 'none';
+            showNotification('Error moving task. Please try again.', 'error');
+            console.error('Error:', error);
+            
+            // Revert the task to its original position visually
+            const originalColumn = document.querySelector(`[data-status="${oldStatus}"]`);
+            if (originalColumn) {
+                originalColumn.appendChild(taskElement);
+            }
+        });
+    }
+
+    // Notification function
+    function showNotification(message, type) {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+        notification.style.position = 'fixed';
+        notification.style.top = '20px';
+        notification.style.right = '20px';
+        notification.style.zIndex = '9999';
+        notification.style.minWidth = '300px';
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 3000);
+    }
+
+    // Initialize counters
+    updateColumnCounters();
+});
+
+// Project filtering (existing functionality)
 document.getElementById('projectFilter').addEventListener('change', function() {
     const projectId = this.value;
     const taskCards = document.querySelectorAll('.task-card');
     
     taskCards.forEach(card => {
-        if (!projectId || card.querySelector('.badge.bg-light').textContent === projectId) {
-            card.style.display = 'block';
-        } else {
-            card.style.display = 'none';
+        const projectBadge = card.querySelector('.badge.bg-light');
+        if (projectBadge) {
+            const taskProjectId = projectBadge.textContent.trim();
+            if (!projectId || taskProjectId === projectId) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
         }
     });
 });
 </script>
+
+<style>
+/* Drag and Drop Styles */
+.task-card {
+    transition: all 0.2s ease;
+    cursor: grab;
+}
+
+.task-card.dragging {
+    cursor: grabbing;
+    transform: rotate(5deg);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.kanban-column {
+    transition: all 0.2s ease;
+    min-height: 400px;
+}
+
+.kanban-column.drag-over {
+    background-color: rgba(52, 152, 219, 0.1);
+    border: 2px dashed #3498db;
+}
+
+.empty-column {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Priority colors */
+.priority-high { border-left: 4px solid #dc3545; }
+.priority-medium { border-left: 4px solid #ffc107; }
+.priority-low { border-left: 4px solid #28a745; }
+.priority-urgent { border-left: 4px solid #dc3545; background-color: rgba(220, 53, 69, 0.05); }
+
+/* Loading overlay */
+#loadingSpinner {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    z-index: 9999;
+}
+</style>
 {% endblock %}

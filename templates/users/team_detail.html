@@ -1,33 +1,127 @@
 {% extends 'base.html' %}
 
+
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">{{ team.name }}</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         {% if membership.role in 'admin,manager' %}
-        <a href="{% url 'users:team_invite' team.id %}" class="btn btn-primary">
+        <a href="{% url 'users:team_invite' team.id %}" class="btn btn-primary me-2">
             <i class="fas fa-user-plus"></i> Invite Members
         </a>
         {% endif %}
-        <a href="{% url 'users:team_list' %}" class="btn btn-outline-secondary ms-2">
+        <a href="{% url 'team_chat:channel_list' team.id %}" class="btn btn-success me-2">
+            <i class="fas fa-comments"></i> Team Chat
+        </a>
+        <a href="{% url 'users:team_list' %}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-left"></i> Back to Teams
         </a>
     </div>
 </div>
 
 <div class="row">
+    <!-- Main Content -->
     <div class="col-md-8">
+        <!-- Team Chat Preview -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-comments"></i> Team Chat Channels
+                </h5>
+                <div>
+                    <a href="{% url 'team_chat:channel_list' team.id %}" class="btn btn-sm btn-outline-primary me-2">
+                        View All
+                    </a>
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createChannelModal">
+                        <i class="fas fa-plus"></i> New Channel
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                {% load team_chat_tags %}
+                {% get_team_channels team as team_channels %}
+                
+                {% if team_channels %}
+                <div class="row">
+                    {% for channel in team_channels|slice:":3" %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card channel-card h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="card-title mb-0">
+                                        <i class="fas fa-hashtag text-muted"></i> {{ channel.name }}
+                                        {% if channel.is_private %}
+                                        <i class="fas fa-lock text-warning small" title="Private Channel"></i>
+                                        {% endif %}
+                                    </h6>
+                                    <span class="badge bg-primary">{{ channel.messages.count }} messages</span>
+                                </div>
+                                <p class="card-text text-muted small mb-3">{{ channel.description|truncatewords:15|default:"No description" }}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        <i class="fas fa-user"></i> {{ channel.created_by.username }}
+                                    </small>
+                                    <a href="{% url 'team_chat:channel_detail' channel.id %}" class="btn btn-sm btn-primary">
+                                        Join Chat <i class="fas fa-arrow-right"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No chat channels yet</h5>
+                    <p class="text-muted mb-4">Start team conversations by creating your first channel</p>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createChannelModal">
+                        <i class="fas fa-plus"></i> Create First Channel
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Team Members -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Team Members</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for member in members %}
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="d-flex align-items-center p-2 border rounded">
+                            <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                {{ member.user.get_full_name|default:member.user.username|slice:":1"|upper }}
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ member.user.get_full_name|default:member.user.username }}</h6>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">{{ member.get_role_display }}</small>
+                                    <small class="text-muted">{{ member.joined_at|date:"M d" }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Team Details -->
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">Team Details</h5>
             </div>
             <div class="card-body">
-                <p>{{ team.description }}</p>
+                <p>{{ team.description|default:"No description provided." }}</p>
                 
-                <div class="row">
+                <div class="row mt-3">
                     <div class="col-md-6">
                         <p><strong>Created by:</strong> {{ team.created_by.get_full_name|default:team.created_by.username }}</p>
-                        <p><strong>Created on:</strong> {{ team.created_at|date:"M d, Y" }}</p>
+                        <p><strong>Created on:</strong> {{ team.created_at|date:"F j, Y" }}</p>
                     </div>
                     <div class="col-md-6">
                         <p><strong>Visibility:</strong> 
@@ -49,57 +143,75 @@
             </div>
         </div>
 
+        <!-- Pending Invitations -->
+        {% if pending_invitations %}
         <div class="card mt-4">
             <div class="card-header">
-                <h5 class="mb-0">Team Members</h5>
+                <h5 class="mb-0 text-info">Pending Invitations</h5>
             </div>
             <div class="card-body">
-                <div class="list-group">
-                    {% for member in members %}
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="mb-1">{{ member.user.get_full_name|default:member.user.username }}</h6>
-                            <p class="mb-1 text-muted">{{ member.user.email }}</p>
-                            <small class="text-muted">{{ member.user.job_title }}</small>
-                        </div>
-                        <div>
-                            <span class="badge bg-{% if member.role == 'admin' %}danger{% elif member.role == 'manager' %}warning{% else %}primary{% endif %}">
-                                {{ member.get_role_display }}
-                            </span>
-                            <small class="text-muted d-block mt-1">Joined {{ member.joined_at|date:"M d, Y" }}</small>
-                        </div>
-                    </div>
-                    {% endfor %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Invited By</th>
+                                <th>Expires</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for invitation in pending_invitations %}
+                            <tr>
+                                <td>{{ invitation.email }}</td>
+                                <td>
+                                    <span class="badge bg-{% if invitation.role == 'admin' %}danger{% elif invitation.role == 'manager' %}warning{% else %}primary{% endif %}">
+                                        {{ invitation.get_role_display }}
+                                    </span>
+                                </td>
+                                <td>{{ invitation.invited_by.get_full_name|default:invitation.invited_by.username }}</td>
+                                <td>{{ invitation.expires_at|date:"M d, Y" }}</td>
+                                <td>
+                                    <span class="badge bg-warning">{{ invitation.get_status_display }}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
+        {% endif %}
     </div>
     
+    <!-- Sidebar -->
     <div class="col-md-4">
-        <div class="card">
+        <!-- Your Role -->
+        <div class="card mb-4">
             <div class="card-header">
                 <h5 class="mb-0">Your Role</h5>
             </div>
             <div class="card-body">
-                <p>You are a <strong>{{ membership.get_role_display }}</strong> in this team.</p>
+                <div class="text-center mb-3">
+                    <div class="avatar-lg bg-{% if membership.role == 'admin' %}danger{% elif membership.role == 'manager' %}warning{% else %}primary{% endif %} text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 80px; height: 80px;">
+                        <i class="fas fa-user fa-2x"></i>
+                    </div>
+                    <h4 class="mb-1">{{ membership.get_role_display }}</h4>
+                    <p class="text-muted">in {{ team.name }}</p>
+                </div>
                 
                 {% if membership.role in 'admin,manager' %}
                 <div class="alert alert-info">
-                    <h6>Team Management</h6>
-                    <p>As a {{ membership.get_role_display }}, you can:</p>
-                    <ul class="small">
-                        <li>Invite new members</li>
-                        {% if membership.role == 'admin' %}
-                        <li>Edit team settings</li>
-                        <li>Remove members</li>
-                        {% endif %}
-                    </ul>
+                    <h6><i class="fas fa-crown"></i> Team Management</h6>
+                    <p class="small mb-0">As a {{ membership.get_role_display }}, you can invite new members{% if membership.role == 'admin' %} and manage team settings{% endif %}.</p>
                 </div>
                 {% endif %}
             </div>
         </div>
 
-        <div class="card mt-4">
+        <!-- Quick Actions -->
+        <div class="card mb-4">
             <div class="card-header">
                 <h5 class="mb-0">Quick Actions</h5>
             </div>
@@ -111,6 +223,9 @@
                     <a href="{% url 'tasks:task_board' %}" class="btn btn-outline-secondary">
                         <i class="fas fa-tasks"></i> View Team Tasks
                     </a>
+                    <a href="{% url 'activity_feeds:team_activity_feed' team.id %}" class="btn btn-outline-info">
+                        <i class="fas fa-rss"></i> Activity Feed
+                    </a>
                     {% if membership.role in 'admin,manager' %}
                     <a href="{% url 'users:team_invite' team.id %}" class="btn btn-outline-success">
                         <i class="fas fa-user-plus"></i> Invite Members
@@ -119,6 +234,163 @@
                 </div>
             </div>
         </div>
+
+        <!-- Team Stats -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Team Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+                        <span>Team Members</span>
+                        <span class="badge bg-primary rounded-pill">{{ members|length }}</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+                        <span>Chat Channels</span>
+                        <span class="badge bg-success rounded-pill">
+                            {% load team_chat_tags %}
+                            {% get_team_channels team as channels %}
+                            {{ channels|length }}
+                        </span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+                        <span>Team Projects</span>
+                        <span class="badge bg-info rounded-pill">
+                            {% load task_extras %}
+                            {% get_team_projects team as projects %}
+                            {{ projects|length }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+
+<!-- Create Channel Modal -->
+<div class="modal fade" id="createChannelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Channel</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="createChannelForm" method="post" action="{% url 'team_chat:create_channel' team.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="channelName" class="form-label">Channel Name</label>
+                        <input type="text" class="form-control" id="channelName" name="name" required 
+                               placeholder="general, announcements, random">
+                        <div class="form-text">Use lowercase letters, numbers, and hyphens only.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="channelDescription" class="form-label">Description (Optional)</label>
+                        <textarea class="form-control" id="channelDescription" name="description" 
+                                  rows="3" placeholder="What's this channel about?"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="isPrivate" name="is_private" value="true">
+                            <label class="form-check-label" for="isPrivate">
+                                <i class="fas fa-lock"></i> Make private channel
+                            </label>
+                        </div>
+                        <div class="form-text">Private channels require member invitation to join.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Channel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .channel-card {
+        transition: all 0.3s ease;
+        border-left: 4px solid #007bff;
+    }
+    
+    .channel-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .avatar-sm {
+        width: 40px;
+        height: 40px;
+        font-weight: bold;
+    }
+    
+    .avatar-lg {
+        font-size: 2rem;
+    }
+    
+    .list-group-item {
+        background: transparent;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Create channel form submission
+        const createChannelForm = document.getElementById('createChannelForm');
+        if (createChannelForm) {
+            createChannelForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(this);
+                const submitBtn = this.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                
+                // Show loading state
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+                submitBtn.disabled = true;
+                
+                fetch(this.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Close modal and redirect to channels list
+                        bootstrap.Modal.getInstance(document.getElementById('createChannelModal')).hide();
+                        window.location.href = "{% url 'team_chat:channel_list' team.id %}";
+                    } else {
+                        alert('Error creating channel: ' + (data.errors || 'Unknown error'));
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error creating channel');
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                });
+            });
+        }
+        
+        // Add animation to channel cards
+        const channelCards = document.querySelectorAll('.channel-card');
+        channelCards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            
+            setTimeout(() => {
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 100);
+        });
+    });
+</script>
 {% endblock %}

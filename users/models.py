@@ -1,3 +1,4 @@
+#user models.py
 
 # Create your models here.
 from django.db import models
@@ -5,10 +6,12 @@ from django.contrib.auth.models import AbstractUser
 from django_countries.fields import CountryField
 from timezone_field import TimeZoneField
 
+from tasks.models import Task
+
 class CustomUser(AbstractUser):
     # Personal Information
     bio = models.TextField(max_length=500, blank=True)
-    phone_number = models.CharField(max_length=20, blank=True)
+    phone_number = models.CharField(max_length=15, blank=True)
     
     # Professional Information
     job_title = models.CharField(max_length=100, blank=True)
@@ -90,6 +93,15 @@ class Team(models.Model):
     
     def is_user_member(self, user):
         return self.members.filter(id=user.id).exists()
+    
+    @property
+    def project_count(self):
+        return self.project_set.count()  # OR: return Project.objects.filter(team=self).count()
+
+    @property
+    def task_count(self):
+        return Task.objects.filter(project__team=self).count()
+
 
 class TeamMembership(models.Model):
     ROLE_CHOICES = [

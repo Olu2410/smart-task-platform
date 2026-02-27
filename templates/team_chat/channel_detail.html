@@ -1,0 +1,418 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ channel.name }} - Team Chat{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">
+            <i class="fas fa-hashtag text-muted"></i> {{ channel.name }}
+        </h1>
+        <p class="text-muted mb-0">{{ channel.description }}</p>
+    </div>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'team_chat:channel_list' team_id=channel.team.id %}" class="btn btn-outline-secondary me-2">
+            <i class="fas fa-arrow-left"></i> Back to Channels
+        </a>
+        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#channelInfoModal">
+            <i class="fas fa-info-circle"></i> Channel Info
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Channel Sidebar -->
+    <div class="col-md-3 d-none d-md-block">
+        <!-- Channel Members -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-users"></i> Members ({{ channel.team.members.count }})
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="member-list">
+                    {% for member in channel.team.members.all %}
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                            {{ member.get_full_name|default:member.username|slice:":1"|upper }}
+                        </div>
+                        <div>
+                            <div class="small fw-bold">{{ member.get_full_name|default:member.username }}</div>
+                            <div class="text-muted extra-small">{{ member.job_title|default:"Team Member" }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Pinned Messages -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-thumbtack"></i> Pinned Messages
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center text-muted py-3">
+                    <i class="fas fa-thumbtack fa-2x mb-2"></i>
+                    <p class="small mb-0">No pinned messages</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Chat Area -->
+    <div class="col-md-9">
+        <div class="card chat-container">
+            <!-- Chat Header -->
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-0">
+                        <i class="fas fa-hashtag text-muted"></i> {{ channel.name }}
+                        <span class="badge bg-secondary">{{ messages|length }} messages</span>
+                    </h6>
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#channelInfoModal">
+                            <i class="fas fa-info-circle"></i> Channel Info
+                        </a></li>
+                        <li><a class="dropdown-item" href="#">
+                            <i class="fas fa-bell"></i> Notification Settings
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="#">
+                            <i class="fas fa-sign-out-alt"></i> Leave Channel
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Messages Container -->
+            <div class="card-body p-0">
+                <div id="messagesContainer" class="message-container p-3" style="max-height: 60vh; overflow-y: auto;">
+                    {% for message in messages %}
+                    <div class="message mb-4" data-message-id="{{ message.id }}">
+                        <div class="d-flex align-items-start">
+                            <!-- User Avatar -->
+                            <div class="flex-shrink-0">
+                                <div class="avatar-md bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                    {{ message.user.get_full_name|default:message.user.username|slice:":1"|upper }}
+                                </div>
+                            </div>
+                            
+                            <!-- Message Content -->
+                            <div class="flex-grow-1">
+                                
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <div>
+                                        <strong class="me-2">{{ message.user.get_full_name|default:message.user.username }}</strong>
+                                        <small class="text-muted">{{ message.created_at|timesince }} ago</small>
+                                    </div>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-link text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="#" onclick="replyToMessage('{{ message.id }}')">
+                                                <i class="fas fa-reply"></i> Reply
+                                            </a></li>
+                                            <li><a class="dropdown-item" href="#" onclick="reactToMessage('{{ message.id }}')">
+                                                <i class="fas fa-smile"></i> Add Reaction
+                                            </a></li>
+                                            <li><a class="dropdown-item" href="#">
+                                                <i class="fas fa-thumbtack"></i> Pin Message
+                                            </a></li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            {% if message.user == request.user %}
+                                            <li><a class="dropdown-item text-danger" href="#">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </a></li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                <!-- Message Body -->
+                                <div class="message-content mb-2">
+                                    {% if message.message_type == 'file' and message.file_attachment %}
+                                    <div class="file-attachment card bg-light">
+                                        <div class="card-body py-2">
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-file fa-2x text-muted me-3"></i>
+                                                <div class="flex-grow-1">
+                                                    <div class="fw-bold">{{ message.file_attachment.filename }}</div>
+                                                    <small class="text-muted">{{ message.file_attachment.file_size_mb }} MB</small>
+                                                    {% if message.file_attachment.description %}
+                                                    <div class="mt-1">{{ message.file_attachment.description }}</div>
+                                                    {% endif %}
+                                                </div>
+                                                <a href="{% url 'team_chat:download_file' file_id=message.file_attachment.id %}" 
+                                                   class="btn btn-primary btn-sm" target="_blank">
+                                                    <i class="fas fa-download"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    <p class="mb-1">{{ message.content|linebreaksbr }}</p>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Message Reactions -->
+                                {% if message.reactions %}
+                                <div class="message-reactions mb-2">
+                                    {% for emoji, users in message.reactions.items %}
+                                    <span class="badge bg-light text-dark reaction-badge me-1" 
+                                          data-emoji="{{ emoji }}" 
+                                          data-message-id="{{ message.id }}"
+                                          onclick="toggleReaction('{{ message.id }}', '{{ emoji }}')">
+                                        {{ emoji }} {{ users|length }}
+                                    </span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                
+                                <!-- Reply Thread Indicator -->
+                                {% if message.reply_count > 0 %}
+                                <div class="thread-indicator">
+                                    <a href="#" class="text-muted small" onclick="showThread('{{ message.id }}')">
+                                        <i class="fas fa-comments"></i> {{ message.reply_count }} reply{{ message.reply_count|pluralize }}
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Reply Form (Hidden) -->
+                        <div class="reply-form mt-2 ms-5" style="display: none;" id="reply-form-{{ message.id }}">
+                            <form class="reply-message-form" onsubmit="sendReply(event, '{{ message.id }}')">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" placeholder="Type your reply..." required>
+                                    <button class="btn btn-primary" type="submit">Reply</button>
+                                    <button class="btn btn-outline-secondary" type="button" onclick="hideReplyForm('{{ message.id }}')">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No messages yet</h5>
+                        <p class="text-muted">Be the first to start the conversation!</p>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Typing Indicator -->
+                <div id="typingIndicator" class="typing-indicator px-3 py-2" style="display: none;">
+                    <div class="text-muted small">
+                        <i class="fas fa-pencil-alt"></i> 
+                        <span id="typingUsers"></span> typing...
+                    </div>
+                </div>
+
+                <!-- Message Input -->
+                <div class="card-footer bg-light">
+                    <form id="messageForm">
+                        {% csrf_token %}
+                        <div class="input-group">
+                            <textarea id="messageInput" class="form-control" placeholder="Type your message..." rows="2" style="resize: none;"></textarea>
+                            <input type="file" id="fileInput" style="display: none;" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif">
+                            <button class="btn btn-outline-secondary" type="button" id="fileUploadBtn" title="Upload File">
+                                <i class="fas fa-paperclip"></i>
+                            </button>
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <!-- Hidden File Upload Form -->
+                    <form id="fileUploadForm" class="mt-2" style="display: none;" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="input-group">
+                            <input type="file" class="form-control" name="file" required>
+                            <input type="text" class="form-control" name="description" placeholder="File description (optional)">
+                            <button type="submit" class="btn btn-success">Upload</button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="toggleFileUpload()">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Channel Info Modal -->
+<div class="modal fade" id="channelInfoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Channel Information</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <strong>Channel Name:</strong> {{ channel.name }}
+                </div>
+                <div class="mb-3">
+                    <strong>Description:</strong> {{ channel.description|default:"No description" }}
+                </div>
+                <div class="mb-3">
+                    <strong>Created:</strong> {{ channel.created_at|date:"F j, Y" }} by {{ channel.created_by.get_full_name }}
+                </div>
+                <div class="mb-3">
+                    <strong>Privacy:</strong> 
+                    {% if channel.is_private %}
+                    <span class="badge bg-warning">Private</span>
+                    {% else %}
+                    <span class="badge bg-success">Public</span>
+                    {% endif %}
+                </div>
+                <div>
+                    <strong>Total Messages:</strong> {{ messages|length }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .message-container {
+        background-color: #f8f9fa;
+    }
+    
+    .message {
+        padding: 10px;
+        border-radius: 8px;
+        transition: background-color 0.2s ease;
+    }
+    
+    .message:hover {
+        background-color: rgba(0,0,0,0.02);
+    }
+    
+    .avatar-md {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+        font-weight: bold;
+    }
+    
+    .avatar-sm {
+        width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+    }
+    
+    .file-attachment {
+        border-left: 3px solid #007bff;
+    }
+    
+    .reaction-badge {
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+    
+    .reaction-badge:hover {
+        background-color: #e9ecef !important;
+    }
+    
+    .typing-indicator {
+        background-color: #e9ecef;
+        border-top: 1px solid #dee2e6;
+    }
+    
+    .chat-container {
+        height: 80vh;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .message-container {
+        flex-grow: 1;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let chatSocket = null;
+    const channelId = '{{ channel.id }}';
+    const currentUserId = String("{{ request.user.id }}");
+    const messagesContainer = document.getElementById('messagesContainer');
+    const messageForm = document.getElementById('messageForm');
+    const messageInput = document.getElementById('messageInput');
+
+    function connect() {
+        const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
+        const ws_path = ws_scheme + '://' + window.location.host + '/ws/chat/' + channelId + '/';
+        
+        chatSocket = new WebSocket(ws_path);
+
+        chatSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            if (data.type === 'message_history') {
+                if (data.messages.length === 0) return;
+
+                // Only clear the "No messages yet" placeholder
+                const emptyState = messagesContainer.querySelector('.text-center');
+                if (emptyState) emptyState.remove();
+
+                data.messages.forEach(msg => addMessage(msg));
+            }else if (data.type === 'chat_message') {
+                addMessage(data.message);
+            }
+            scrollToBottom();
+        };
+
+        chatSocket.onclose = function(e) {
+            console.log('Socket closed. Reconnecting in 2s...');
+            setTimeout(connect, 2000);
+        };
+    }
+
+    // THIS PREVENTS THE PAGE RELOAD
+    messageForm.onsubmit = function(e) {
+        e.preventDefault();
+        const message = messageInput.value.trim();
+        if (message && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+            chatSocket.send(JSON.stringify({'message': message}));
+            messageInput.value = '';
+        }
+        return false; 
+    };
+
+    function addMessage(msg) {
+    if (!msg || !msg.user) return;
+
+    const div = document.createElement('div');
+    const isMe = String(msg.user.id) === currentUserId;
+
+    div.className = `message mb-3 ${isMe ? 'text-end' : ''}`;
+    div.innerHTML = `
+        <div class="d-inline-block p-2 rounded ${isMe ? 'bg-primary text-white' : 'bg-light'}" style="max-width: 80%;">
+            <small class="d-block fw-bold">
+                ${isMe ? 'You' : msg.user.full_name}
+            </small>
+            <span>${msg.content}</span>
+        </div>
+    `;
+
+    messagesContainer.appendChild(div);
+    }
+
+    function scrollToBottom() {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    connect();
+</script>
+{% endblock %}

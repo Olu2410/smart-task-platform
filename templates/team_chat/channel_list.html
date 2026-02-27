@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ team.name }} - Channels</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createChannelModal">
+            <i class="fas fa-plus"></i> Create Channel
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-hashtag"></i> Team Channels
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if channels %}
+                <div class="row">
+                    {% for channel in channels %}
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card channel-card h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <h5 class="card-title">
+                                        <i class="fas fa-hashtag text-muted"></i> {{ channel.name }}
+                                        {% if channel.is_private %}
+                                        <i class="fas fa-lock text-warning" title="Private Channel"></i>
+                                        {% endif %}
+                                    </h5>
+                                    <span class="badge bg-primary">{{ channel.messages.count }} messages</span>
+                                </div>
+                                <p class="card-text text-muted">{{ channel.description|default:"No description" }}</p>
+                                <div class="channel-meta">
+                                    <small class="text-muted">
+                                        <i class="fas fa-user"></i> Created by {{ channel.created_by.get_full_name }}
+                                    </small>
+                                    <br>
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar"></i> {{ channel.created_at|date:"M d, Y" }}
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-transparent">
+                                <a href="{% url 'team_chat:channel_detail' channel.id %}" class="btn btn-primary btn-sm w-100">
+                                    <i class="fas fa-comments"></i> Join Channel
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No channels yet</h5>
+                    <p class="text-muted">Create your first channel to start team conversations</p>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createChannelModal">
+                        <i class="fas fa-plus"></i> Create First Channel
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Channel Modal -->
+<div class="modal fade" id="createChannelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Channel</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="createChannelForm" method="post" action="{% url 'team_chat:create_channel' team.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="channelName" class="form-label">Channel Name</label>
+                        <input type="text" class="form-control" id="channelName" name="name" required 
+                               placeholder="e.g., general, announcements, random">
+                        <div class="form-text">Channel names should be lowercase without spaces.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="channelDescription" class="form-label">Description (Optional)</label>
+                        <textarea class="form-control" id="channelDescription" name="description" 
+                                  rows="3" placeholder="What's this channel about?"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="isPrivate" name="is_private">
+                            <label class="form-check-label" for="isPrivate">
+                                Make private channel
+                            </label>
+                        </div>
+                        <div class="form-text">Private channels can only be joined by invitation.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Channel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .channel-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border-left: 4px solid #007bff;
+    }
+    
+    .channel-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .channel-meta {
+        border-top: 1px solid #eee;
+        padding-top: 10px;
+        margin-top: 15px;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Create channel form submission
+        document.getElementById('createChannelForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal and reload page to show new channel
+                    bootstrap.Modal.getInstance(document.getElementById('createChannelModal')).hide();
+                    location.reload();
+                } else {
+                    alert('Error creating channel: ' + (data.errors || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error creating channel');
+            });
+        });
+        
+        // Add loading animation to channel cards
+        const channelCards = document.querySelectorAll('.channel-card');
+        channelCards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            
+            setTimeout(() => {
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 100);
+        });
+    });
+</script>
+{% endblock %}

@@ -31,6 +31,8 @@ urlpatterns = [
     path('ai-coach/', include('ai_coach.urls', namespace='ai_coach')),
     path('calendar/', include('calendar_integration.urls', namespace='calendar')),
     path('notifications/', include('notifications.urls', namespace='notifications')),
+    path('team-chat/', include('team_chat.urls', namespace='team_chat')),
+    path('activity/', include('activity_feeds.urls', namespace='activity_feeds')),
     
     # API URLs
     # path('api/tasks/', include('tasks.api_urls')),

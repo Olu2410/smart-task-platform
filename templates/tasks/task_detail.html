@@ -42,15 +42,54 @@
     <div class="col-md-4">
         <div class="card">
             <div class="card-header">
-                <h5>Quick Actions</h5>
+                <h5 class="mb-0">AI Analysis</h5>
             </div>
             <div class="card-body">
-                <div class="d-grid gap-2">
-                    <a href="{% url 'tasks:update_task' task.pk %}" class="btn btn-primary">Edit Task</a>
-                    <a href="{% url 'tasks:task_board' %}" class="btn btn-outline-secondary">Back to Board</a>
-                </div>
+                <button id="analyzeTaskBtn" class="btn btn-outline-info">
+                    <i class="fas fa-robot"></i> Get AI Suggestions
+                </button>
+                <div id="analysisResult" class="mt-3"></div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.getElementById('analyzeTaskBtn').addEventListener('click', function() {
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+    
+    fetch("{% url 'ai_coach:analyze_task' task.pk %}")
+    .then(response => response.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-robot"></i> Get AI Suggestions';
+        
+        const resultDiv = document.getElementById('analysisResult');
+        if (data.success) {
+            if (data.recommended_priority) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-info">
+                        <h6>AI Suggestion:</h6>
+                        <p><strong>Priority:</strong> ${data.recommended_priority}</p>
+                        <p><strong>Reason:</strong> ${data.reasoning}</p>
+                        <p><strong>Confidence:</strong> ${(data.confidence * 100).toFixed(0)}%</p>
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = '<div class="alert alert-warning">No analysis available for this task.</div>';
+            }
+        } else {
+            resultDiv.innerHTML = '<div class="alert alert-danger">Failed to analyze task.</div>';
+        }
+    })
+    .catch(error => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-robot"></i> Get AI Suggestions';
+        console.log(error);
+        document.getElementById('analysisResult').innerHTML = '<div class="alert alert-danger">Error analyzing task.</div>';
+    });
+});
+</script>
 {% endblock %}

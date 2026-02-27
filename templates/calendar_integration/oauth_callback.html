@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <div class="mb-4">
+                    <i class="fas fa-sync-alt fa-3x text-primary mb-3"></i>
+                    <h3>Connecting to Google Calendar</h3>
+                </div>
+                
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                
+                <p class="text-muted">
+                    Please wait while we connect your Google Calendar...
+                </p>
+                
+                <div class="alert alert-info mt-4">
+                    <small>
+                        <i class="fas fa-info-circle"></i>
+                        You will be redirected to your calendar once the connection is complete.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-redirect after a brief delay
+setTimeout(() => {
+    window.location.href = "{% url 'calendar:calendar_view' %}";
+}, 2000);
+</script>
+{% endblock %}

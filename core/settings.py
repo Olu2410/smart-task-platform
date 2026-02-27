@@ -1,3 +1,4 @@
+#  Django settings for core project.
 """
 Django settings for core project.
 
@@ -35,6 +36,7 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(','
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -45,6 +47,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'channels',
     'django_bootstrap5',
+    'timezone_field',
+    'django_countries',
     
     # Local apps
     'users',
@@ -52,8 +56,9 @@ INSTALLED_APPS = [
     'ai_coach',
     'calendar_integration',
     'notifications',
-    'timezone_field',
-    'django_countries',
+    'team_chat', 
+    'activity_feeds',
+    
 ]
 
 MIDDLEWARE = [
@@ -147,8 +152,49 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# Media files (Uploaded files)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# File upload settings
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
+MAX_FILE_UPLOAD_SIZE = 52428800  # 50MB
+
+# Avatar upload settings
+AVATAR_MAX_SIZE = 2 * 1024 * 1024  # 2MB
+AVATAR_ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif']
+
+# File type restrictions
+ALLOWED_FILE_EXTENSIONS = {
+    'document': ['.pdf', '.doc', '.docx', '.txt', '.rtf', '.odt'],
+    'image': ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp'],
+    'video': ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm'],
+    'audio': ['.mp3', '.wav', '.ogg', '.m4a', '.flac'],
+    'archive': ['.zip', '.rar', '.7z', '.tar', '.gz'],
+}
+
+ALLOWED_MIME_TYPES = {
+    'document': [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain',
+        'application/rtf',
+        'application/vnd.oasis.opendocument.text',
+    ],
+    'image': ['image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/svg+xml', 'image/webp'],
+    'video': ['video/mp4', 'video/avi', 'video/quicktime', 'video/x-ms-wmv', 'video/x-flv', 'video/webm'],
+    'audio': ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/flac'],
+    'archive': ['application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed', 'application/x-tar', 'application/gzip'],
+}
+
+# Notification settings
+NOTIFICATION_SETTINGS = {
+    'ENABLE_PUSH': True,
+    'ENABLE_EMAIL': True,
+    'BATCH_INTERVAL': 300,  # 5 minutes
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -165,23 +211,40 @@ REST_FRAMEWORK = {
     ],
 }
 
-# Django Channels
+# Django Channels configuration
 ASGI_APPLICATION = 'core.asgi.application'
+
+# CHANNEL_LAYERS = {
+#     'default': {
+#         'BACKEND': 'channels_redis.core.RedisChannelLayer',
+#         'CONFIG': {
+#             "hosts": [('127.0.0.1', 6379)],
+#         },
+#     },
+# }
+
+# Channel layers configuration
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            "hosts": [('127.0.0.1', 6379)],
-        },
+        'BACKEND': 'channels.layers.InMemoryChannelLayer'
     },
 }
 
 # AI Configuration
 OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
 
-# Google Calendar API
-GOOGLE_CALENDAR_CLIENT_ID = config('GOOGLE_CALENDAR_CLIENT_ID', default='')
-GOOGLE_CALENDAR_CLIENT_SECRET = config('GOOGLE_CALENDAR_CLIENT_SECRET', default='')
+# AI Features
+AI_TASK_SUGGESTIONS_ENABLED = config('AI_TASK_SUGGESTIONS_ENABLED', default=True, cast=bool)
+AI_TIME_OPTIMIZATION_ENABLED = config('AI_TIME_OPTIMIZATION_ENABLED', default=True, cast=bool)
+
+# Google Calendar API Configuration
+GOOGLE_OAUTH_CLIENT_ID = config('GOOGLE_OAUTH_CLIENT_ID', default='')
+GOOGLE_OAUTH_CLIENT_SECRET = config('GOOGLE_OAUTH_CLIENT_SECRET', default='')
+GOOGLE_OAUTH_REDIRECT_URI = config('GOOGLE_OAUTH_REDIRECT_URI', default='http://localhost:8000/calendar/google/callback/')
+
+# Calendar Settings
+CALENDAR_SYNC_ENABLED = config('CALENDAR_SYNC_ENABLED', default=True, cast=bool)
+
 
 # Email configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -199,3 +262,4 @@ AUTH_USER_MODEL = 'users.CustomUser'
 LOGIN_URL = 'users:login'
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'users:login'
+

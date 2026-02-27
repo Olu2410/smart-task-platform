@@ -23,6 +23,6 @@ urlpatterns = [
     path('<int:task_id>/attachment/', views.add_attachment, name='add_attachment'),
     
     # # AJAX views
-    # path('api/update-status/', views.update_task_status, name='update_task_status'),
+    path('api/update-status/', views.update_task_status, name='update_task_status'),
     # path('api/reorder-tasks/', views.reorder_tasks, name='reorder_tasks'),
 ]

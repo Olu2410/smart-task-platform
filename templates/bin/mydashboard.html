@@ -1,0 +1,124 @@
+{#
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Dashboard</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'tasks:create_task' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> New Task
+        </a>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body">
+                <h5 class="card-title">{{ total_tasks }}</h5>
+                <p class="card-text">Total Tasks</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning mb-3">
+            <div class="card-body">
+                <h5 class="card-title">{{ pending_tasks }}</h5>
+                <p class="card-text">Pending</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <h5 class="card-title">{{ completed_tasks }}</h5>
+                <p class="card-text">Completed</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger mb-3">
+            <div class="card-body">
+                <h5 class="card-title">{{ overdue_tasks }}</h5>
+                <p class="card-text">Overdue</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'tasks:create_task' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-plus"></i> Create New Task
+                    </a>
+                    <a href="{% url 'tasks:create_project' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-folder-plus"></i> Create New Project
+                    </a>
+                    <a href="{% url 'tasks:task_board' %}" class="btn btn-outline-info">
+                        <i class="fas fa-tasks"></i> View Task Board
+                    </a>
+                </div>
+</div>
+            </div>
+        </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Recent Activity</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">No recent activity yet.</p>
+                <a href="{% url 'tasks:task_board' %}" class="btn btn-sm btn-primary">View All Tasks</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Tasks -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Recent Tasks</h5>
+            </div>
+            <div class="card-body">
+                {% if tasks_by_status %}
+                    <div class="list-group">
+                        {% for status, tasks in tasks_by_status.items %}
+                            {% for task in tasks %}
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ task.title }}</h6>
+                                    <small class="text-muted">{{ task.get_status_display }}</small>
+                                </div>
+                                <p class="mb-1">{{ task.description|truncatewords:10|default:"No description" }}</p>
+                                <small class="text-muted">
+                                    Project: {{ task.project.name }} | 
+                                    Due: {% if task.due_date %}{{ task.due_date|date:"M d" }}{% else %}No due date{% endif %}
+                                </small>
+                                <span class="badge bg-{{ task.priority }} float-end mt-1">
+                                    {{ task.get_priority_display }}
+                                </span>
+                            </div>
+                            {% endfor %}
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No tasks yet.</p>
+                    <a href="{% url 'tasks:create_task' %}" class="btn btn-primary">Create Your First Task</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+#}

@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% load django_bootstrap5 %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-clock text-primary"></i> Create Time Block
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'calendar:calendar_view' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Calendar
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Time Block Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="title" class="form-label">Block Title *</label>
+                                <input type="text" class="form-control" id="title" name="title" required 
+                                       placeholder="Deep work, Project time, Learning, etc.">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="block_type" class="form-label">Block Type</label>
+                                <select class="form-select" id="block_type" name="block_type">
+                                    <option value="focus">Focus Time</option>
+                                    <option value="meeting">Meeting Block</option>
+                                    <option value="break">Break</option>
+                                    <option value="learning">Learning</option>
+                                    <option value="admin">Administrative</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" 
+                                  placeholder="What will you work on during this time?"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="start_time" class="form-label">Start Time *</label>
+                                <input type="datetime-local" class="form-control" id="start_time" name="start_time" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="end_time" class="form-label">End Time *</label>
+                                <input type="datetime-local" class="form-control" id="end_time" name="end_time" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Associated Tasks (Optional)</label>
+                        <div class="task-selection">
+                            {% for task in tasks %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="tasks" value="{{ task.id }}" id="task-{{ task.id }}">
+                                <label class="form-check-label" for="task-{{ task.id }}">
+                                    {{ task.title }} 
+                                    <small class="text-muted">({{ task.project.name }})</small>
+                                </label>
+                            </div>
+                            {% empty %}
+                            <p class="text-muted">No tasks available for scheduling.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="is_recurring" name="is_recurring">
+                        <label class="form-check-label" for="is_recurring">
+                            Recurring time block
+                        </label>
+                    </div>
+                    
+                    <div id="recurrenceSettings" style="display: none;">
+                        <div class="mb-3">
+                            <label class="form-label">Repeat on Days</label>
+                            <div class="days-selection">
+                                {% for day_num, day_name in days_of_week %}
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" name="recurrence_days" 
+                                           value="{{ day_name|lower }}" id="day-{{ day_num }}">
+                                    <label class="form-check-label" for="day-{{ day_num }}">
+                                        {{ day_name|slice:":3" }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Create Time Block
+                        </button>
+                        <a href="{% url 'calendar:calendar_view' %}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Time Blocking Tips -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Time Blocking Benefits</h5>
+            </div>
+            <div class="card-body">
+                <ul class="small">
+                    <li class="mb-2">
+                        <strong>Increased Focus:</strong> Dedicate specific time for deep work without interruptions
+                    </li>
+                    <li class="mb-2">
+                        <strong>Better Planning:</strong> Visualize your day and allocate time realistically
+                    </li>
+                    <li class="mb-2">
+                        <strong>Reduced Context Switching:</strong> Group similar tasks together
+                    </li>
+                    <li class="mb-2">
+                        <strong>Improved Productivity:</strong> Work with intention and purpose
+                    </li>
+                    <li>
+                        <strong>Work-Life Balance:</strong> Schedule breaks and personal time intentionally
+                    </li>
+                </ul>
+                
+                <div class="alert alert-info mt-3">
+                    <small>
+                        <strong>Tip:</strong> Start with 2-3 time blocks per day and adjust based on what works for you.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default times (next hour, 2-hour block)
+    const now = new Date();
+    const startTime = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour from now
+    const endTime = new Date(startTime.getTime() + 2 * 60 * 60 * 1000); // 3 hours from now
+    
+    document.getElementById('start_time').value = startTime.toISOString().slice(0, 16);
+    document.getElementById('end_time').value = endTime.toISOString().slice(0, 16);
+    
+    // Show/hide recurrence settings
+    document.getElementById('is_recurring').addEventListener('change', function() {
+        document.getElementById('recurrenceSettings').style.display = this.checked ? 'block' : 'none';
+    });
+    
+    // Select work days by default for recurrence
+    const workDays = [0, 1, 2, 3, 4]; // Monday to Friday
+    document.getElementById('is_recurring').addEventListener('change', function() {
+        if (this.checked) {
+            workDays.forEach(day => {
+                const checkbox = document.getElementById('day-' + day);
+                if (checkbox) checkbox.checked = true;
+            });
+        }
+    });
+});
+</script>
+
+<style>
+.days-selection .form-check-inline {
+    margin-right: 15px;
+}
+
+.task-selection {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+}
+</style>
+{% endblock %}
